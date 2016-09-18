@@ -9,6 +9,8 @@
 typedef std::vector< std::vector< COLORREF > > TImage;
 
 using namespace Gdiplus;
+using std::cout;
+using std::endl;
 
 class CBayerPattern {
 public:
@@ -20,6 +22,9 @@ public:
 	void GetData( BitmapData& bmpData ) const;
 
 private:
+	// Изображение размера height + 4 X width + 4
+	// так как не хочу думать что будет с крайними пикселями.
+	// Со всех сторон на 2 строки пиксели просто дублируются.
 	TImage image;
 	size_t height;
 	size_t width;

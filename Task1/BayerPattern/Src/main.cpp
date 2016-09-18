@@ -50,7 +50,7 @@ int wmain( int argc, wchar_t* argv[] )
 		if( Ok != GDIBitmap.LockBits( &rc, ImageLockModeRead | ImageLockModeWrite, PixelFormat24bppRGB, &bmpData ) ) {
 			cout << L"Failed to lock image: " << argv[1] << endl;
 		} else {
-			cout << L"File: %s\n" << argv[1] << endl;
+			cout << L"File:" << argv[1] << endl;
 		}
 
 		CBayerPattern image( bmpData );

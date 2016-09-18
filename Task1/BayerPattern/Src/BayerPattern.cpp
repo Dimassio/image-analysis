@@ -22,14 +22,14 @@ CBayerPattern::CBayerPattern( const BitmapData& bmpData )
 	for( size_t y = 0; y < h; y++ ) {
 		int pixelAdr = baseAdr;
 
-		// Adding first two lines
+		// Добавляем 2 линии СВЕРХУ
 		if( y == 0 ) {
 			for( size_t x = 0; x < w; x++ ) {
 				int B = pBuffer[pixelAdr]; // blue
 				int G = pBuffer[pixelAdr + 1]; // green
 				int R = pBuffer[pixelAdr + 2]; // red
 
-				// Adding TWO first pixels
+				// Добавляем 2 первых пикселя
 				if( x == 0 ) {
 					image[0][0] = RGB( R, G, B );
 					image[0][1] = RGB( R, G, B );
@@ -37,7 +37,7 @@ CBayerPattern::CBayerPattern( const BitmapData& bmpData )
 					image[1][1] = RGB( R, G, B );
 				}
 
-				// Adding LAST TWO pixels
+				// Добавляем 2 последних пикселя
 				if( x == w - 1 ) {
 					image[0][w + 2] = RGB( R, G, B );
 					image[0][w + 3] = RGB( R, G, B );
@@ -45,7 +45,6 @@ CBayerPattern::CBayerPattern( const BitmapData& bmpData )
 					image[1][w + 3] = RGB( R, G, B );
 				}
 
-				// (x, y) pixel
 				image[0][x + ZeroLevel] = RGB( R, G, B );
 				image[1][x + ZeroLevel] = RGB( R, G, B );
 
@@ -55,14 +54,14 @@ CBayerPattern::CBayerPattern( const BitmapData& bmpData )
 
 		// Возвращаем на место
 		pixelAdr = baseAdr;
-		// Adding last two lines
+		// Добавляем 2 линии СНИЗУ
 		if( y == h - 1 ) {
 			for( size_t x = 0; x < w; x++ ) {
 				int B = pBuffer[pixelAdr]; // blue
 				int G = pBuffer[pixelAdr + 1]; // green
 				int R = pBuffer[pixelAdr + 2]; // red
 
-				// Adding TWO first pixels
+				// Добавляем 2 первых пикселя
 				if( x == 0 ) {
 					image[h + 2][0] = RGB( R, G, B );
 					image[h + 2][1] = RGB( R, G, B );
@@ -70,7 +69,7 @@ CBayerPattern::CBayerPattern( const BitmapData& bmpData )
 					image[h + 3][1] = RGB( R, G, B );
 				}
 
-				// Adding LAST TWO pixels
+				// Добавляем 2 последних пикселя
 				if( x == w - 1 ) {
 					image[h + 2][w + 2] = RGB( R, G, B );
 					image[h + 2][w + 3] = RGB( R, G, B );
@@ -78,7 +77,6 @@ CBayerPattern::CBayerPattern( const BitmapData& bmpData )
 					image[h + 3][w + 3] = RGB( R, G, B );
 				}
 
-				// (x, y) pixel
 				image[h + 2][x + ZeroLevel] = RGB( R, G, B );
 				image[h + 3][x + ZeroLevel] = RGB( R, G, B );
 
@@ -88,12 +86,23 @@ CBayerPattern::CBayerPattern( const BitmapData& bmpData )
 
 		// Возвращаем на место
 		pixelAdr = baseAdr;
-		// Usual adding
+		// Сама картинка
 		for( size_t x = 0; x < w; x++ ) {
-			// (x, y) pixel
 			int B = pBuffer[pixelAdr]; // blue
 			int G = pBuffer[pixelAdr + 1]; // green
 			int R = pBuffer[pixelAdr + 2]; // red
+			
+			// Добавляем 2 первых пикселя
+			if( x == 0 ) {
+				image[ZeroLevel + y][0] = RGB( R, G, B );
+				image[ZeroLevel + y][1] = RGB( R, G, B );
+			}
+
+			// Добавляем 2 последних пикселя
+			if( x == w - 1 ) {
+				image[ZeroLevel + y][w + 2] = RGB( R, G, B );
+				image[ZeroLevel + y][w + 3] = RGB( R, G, B );
+			}
 
 			image[ZeroLevel + y][ZeroLevel + x] = RGB( R, G, B );
 
@@ -102,8 +111,8 @@ CBayerPattern::CBayerPattern( const BitmapData& bmpData )
 		baseAdr += bpr;
 	}
 
-	height = h + 2;
-	width = w + 2;
+	height = h;
+	width = w;
 }
 
 // Pixel Grouping алгоритм
@@ -141,12 +150,12 @@ void CBayerPattern::GetData( BitmapData& bmpData ) const
 	}
 }
 
-bool CBayerPattern::isBlue( const size_t y, const size_t x ) const
+bool CBayerPattern::isBlue( const size_t x, const size_t y ) const
 {
 	return ( GetGValue( image[y][x] ) == 0 ) && ( GetRValue( image[y][x] ) == 0 );
 }
 
-bool CBayerPattern::isRed( const size_t y, const size_t x )const
+bool CBayerPattern::isRed( const size_t x, const size_t y )const
 {
 	return ( GetBValue( image[y][x] ) == 0 ) && ( GetGValue( image[y][x] ) == 0 );
 }
