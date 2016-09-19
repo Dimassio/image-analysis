@@ -1,16 +1,14 @@
 #pragma once
 
+#include <Common.h>
 #include <windows.h>
 #include <gdiplus.h>
 #include <time.h>
-#include <iostream>
 #include <vector>
 
 typedef std::vector< std::vector< COLORREF > > TImage;
 
 using namespace Gdiplus;
-using std::cout;
-using std::endl;
 
 class CBayerPattern {
 public:
@@ -31,6 +29,9 @@ private:
 
 	void restoreGreen();
 	void restoreBlueRed();
+	void computeRedBlueAtGreen();
+	void computeBlueAtRed();
+	void computeRedAtBlue();
 	bool isBlue( const size_t x, const size_t y ) const;
 	bool isGreen( const size_t x, const size_t y ) const;
 	bool isRed( const size_t x, const size_t y ) const;

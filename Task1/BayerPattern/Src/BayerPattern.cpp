@@ -167,13 +167,13 @@ bool CBayerPattern::isGreen( const size_t x, const size_t y ) const
 
 void CBayerPattern::restoreGreen()
 {
-	for( size_t i = ZeroLevel; i < height; ++i ) {
-		for( size_t j = ZeroLevel; j < width; ++j ) {
+	for( size_t i = ZeroLevel; i < ZeroLevel + height; ++i ) {
+		for( size_t j = ZeroLevel; j < ZeroLevel + width; ++j ) {
 			int deltaN = 0;
 			int deltaE = 0;
 			int deltaW = 0;
 			int deltaS = 0;
-			if( isBlue( i, j ) ) {
+			if( isBlue( j, i ) ) {
 				// deltaN
 				deltaN += abs( GetBValue( image[i][j] ) - GetBValue( image[i - 2][j] ) ) * 2 +
 					abs( GetGValue( image[i - 1][j] ) - GetGValue( image[i + 1][j] ) );
@@ -188,7 +188,7 @@ void CBayerPattern::restoreGreen()
 					abs( GetGValue( image[i - 1][j] ) - GetGValue( image[i + 1][j] ) );
 			}
 
-			if( isRed( i, j ) ) {
+			if( isRed( j, i ) ) {
 				// deltaN
 				deltaN += abs( GetRValue( image[i][j] ) - GetRValue( image[i - 2][j] ) ) * 2 +
 					abs( GetGValue( image[i - 1][j] ) - GetGValue( image[i + 1][j] ) );
@@ -205,13 +205,51 @@ void CBayerPattern::restoreGreen()
 
 			int smallestGrad = min( deltaN, min( deltaE, min( deltaW, deltaS ) ) );
 			if( smallestGrad == deltaN ) {
-				// todo
+				image[i][j] = RGB( GetRValue( image[i][j] ), 
+								   ( GetGValue(image[i - 1][j]) * 3 + GetGValue( image[i + 1][j] ) + 
+									 isRed(j, i) ? GetRValue(image[i][j]) - GetRValue( image[i - 2][j] ) : GetBValue(image[i][j]) - GetBValue( image[i - 2][j] ) ) / 4,
+								   GetBValue( image[i][j] ) );
+			}
+			if( smallestGrad == deltaE ) {
+				image[i][j] = RGB( GetRValue( image[i][j] ),
+								   (GetGValue(image[i][j + 1]) * 3 + GetGValue( image[i][j - 1]) +
+									 isRed( j, i ) ? GetRValue( image[i][j] ) - GetRValue( image[i][j + 2] ) : GetBValue( image[i][j] ) - GetBValue( image[i][j + 2] ) ) / 4,
+								   GetBValue( image[i][j] ) );
+			}
+			if( smallestGrad == deltaW ) {
+				image[i][j] = RGB( GetRValue( image[i][j] ),
+								   ( GetGValue( image[i][j - 1] ) * 3 + GetGValue( image[i][j + 1] ) +
+									 isRed( j, i ) ? GetRValue( image[i][j] ) - GetRValue( image[i][j - 2] ) : GetBValue( image[i][j] ) - GetBValue( image[i][j - 2] ) ) / 4,
+								   GetBValue( image[i][j] ) );
+			}
+			if( smallestGrad == deltaS ) {
+				image[i][j] = RGB( GetRValue( image[i][j] ),
+								   ( GetGValue( image[i + 1][j] ) * 3 + GetGValue( image[i - 1][j] ) +
+									 isRed( j, i ) ? GetRValue( image[i][j] ) - GetRValue( image[i + 2][j] ) : GetBValue( image[i][j] ) - GetBValue( image[i + 2][j] ) ) / 4,
+								   GetBValue( image[i][j] ) );
 			}
 		}
 	}
 }
 
-
 void CBayerPattern::restoreBlueRed()
 {
+	computeRedBlueAtGreen();
+	computeBlueAtRed();
+	computeRedAtBlue();
+}
+
+void CBayerPattern::computeRedBlueAtGreen()
+{
+	// todo:
+}
+
+void CBayerPattern::computeBlueAtRed()
+{
+
+}
+
+void CBayerPattern::computeRedAtBlue()
+{
+
 }

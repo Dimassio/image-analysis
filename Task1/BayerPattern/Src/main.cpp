@@ -33,7 +33,7 @@ int GetEncoderClsid( const wchar_t* format, CLSID* pClsid )
 int wmain( int argc, wchar_t* argv[] )
 {
 	if( argc != 3 ) {
-		cout << L"Usage: BayerPattern <inputFile.bmp> <outputFile.bmp>" << endl;
+		wcout << L"Usage: BayerPattern <inputFile.bmp> <outputFile.bmp>" << endl;
 		return 0;
 	}
 
@@ -48,9 +48,9 @@ int wmain( int argc, wchar_t* argv[] )
 		BitmapData bmpData;
 		Rect rc( 0, 0, w, h ); // whole image
 		if( Ok != GDIBitmap.LockBits( &rc, ImageLockModeRead | ImageLockModeWrite, PixelFormat24bppRGB, &bmpData ) ) {
-			cout << L"Failed to lock image: " << argv[1] << endl;
+			wcout << L"Failed to lock image: " << argv[1] << endl;
 		} else {
-			cout << L"File:" << argv[1] << endl;
+			wcout << L"File:" << argv[1] << endl;
 		}
 
 		CBayerPattern image( bmpData );
