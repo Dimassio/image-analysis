@@ -35,4 +35,5 @@ private:
 	bool isBlue( const size_t x, const size_t y ) const;
 	bool isGreen( const size_t x, const size_t y ) const;
 	bool isRed( const size_t x, const size_t y ) const;
+	int hueTransit( int l1, int l2, int l3, int v1, int v3 ) const;
 };

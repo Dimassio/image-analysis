@@ -123,7 +123,9 @@ void CBayerPattern::Process()
 	1. Сначала восстановим все незнакомые зеленые цвета.
 	2. Имея исхродное изображение, и весь восстановленный зеленый цвет - восстановим синий и красный
 	*/
+	wcout << "Now restoring green..." << endl;
 	restoreGreen();
+	wcout << "Now restoring blue and red..." << endl;
 	restoreBlueRed();
 }
 
@@ -234,8 +236,11 @@ void CBayerPattern::restoreGreen()
 
 void CBayerPattern::restoreBlueRed()
 {
+	wcout << "Now will compute red and blue values at green" << endl;
 	computeRedBlueAtGreen();
+	wcout << "Now will compute blue values at red" << endl;
 	computeBlueAtRed();
+	wcout << "Now will compute red values at blue" << endl;
 	computeRedAtBlue();
 }
 
@@ -252,4 +257,13 @@ void CBayerPattern::computeBlueAtRed()
 void CBayerPattern::computeRedAtBlue()
 {
 
+}
+
+int CBayerPattern::hueTransit( int l1, int l2, int l3, int v1, int v3 ) const
+{	
+	if( ( ( l1 < l2 ) && ( l2 < l3 ) ) || ( ( l1 > l2 ) && ( l2 > l3 ) ) ) {
+		return v1 + ( v3 - v1 ) * ( l2 - l1 ) / ( l3 - l1 );
+	} else {
+		return ( v1 + v3 ) / 2 + ( l2 * 2 - l1 - l3 ) / 4;
+	}
 }
