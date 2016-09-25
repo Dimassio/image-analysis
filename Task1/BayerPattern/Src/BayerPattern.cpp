@@ -4,10 +4,16 @@
 // На 2 пикселя увеличим изображения со всех сторон
 const int ZeroLevel = 2;
 
+// Если значение по умолчанию для рамки не задано, то боковые строчки будут экстраполированы на 2 пикселя во все стороны,
+// если задано - то def - значение этих пикселей
+#define FRAME_VALUE(R, G, B, def) def == -1 ? RGB(R, G, B) : def;
+
 CBayerPattern::CBayerPattern( const BitmapData& bmpData, int defFrameValue )
 {
 	const size_t w = bmpData.Width;
 	const size_t h = bmpData.Height;
+	height = h;
+	width = w;
 	const int bpr = bmpData.Stride;
 	const int bpp = 3; // BGR24
 	BYTE* pBuffer = ( BYTE* ) bmpData.Scan0;
@@ -18,106 +24,14 @@ CBayerPattern::CBayerPattern( const BitmapData& bmpData, int defFrameValue )
 		image[i].resize( w + 4 );
 	}
 
+	// Сама картинка
 	int baseAdr = 0;
 	for( size_t y = 0; y < h; y++ ) {
 		int pixelAdr = baseAdr;
-
-		// Добавляем 2 линии СВЕРХУ
-		if( y == 0 ) {
-			for( size_t x = 0; x < w; x++ ) {
-				int B = pBuffer[pixelAdr]; // blue
-				int G = pBuffer[pixelAdr + 1]; // green
-				int R = pBuffer[pixelAdr + 2]; // red
-
-				// Linear + gamma 2.2
-				R = linAndGamma( R );
-				G = linAndGamma( G );
-				B = linAndGamma( B );
-
-				// Добавляем 2 первых пикселя
-				if( x == 0 ) {
-					image[0][0] = FRAME_VALUE( R, G, B, defFrameValue );
-					image[0][1] = FRAME_VALUE( R, G, B, defFrameValue );
-					image[1][0] = FRAME_VALUE( R, G, B, defFrameValue );
-					image[1][1] = FRAME_VALUE( R, G, B, defFrameValue );
-				}
-
-				// Добавляем 2 последних пикселя
-				if( x == w - 1 ) {
-					image[0][w + 2] = FRAME_VALUE( R, G, B, defFrameValue );
-					image[0][w + 3] = FRAME_VALUE( R, G, B, defFrameValue );
-					image[1][w + 2] = FRAME_VALUE( R, G, B, defFrameValue );
-					image[1][w + 3] = FRAME_VALUE( R, G, B, defFrameValue );
-				}
-
-				image[0][x + ZeroLevel] = FRAME_VALUE( R, G, B, defFrameValue );
-				image[1][x + ZeroLevel] = FRAME_VALUE( R, G, B, defFrameValue );
-
-				pixelAdr += bpp;
-			}
-		}
-
-		// Возвращаем на место
-		pixelAdr = baseAdr;
-		// Добавляем 2 линии СНИЗУ
-		if( y == h - 1 ) {
-			for( size_t x = 0; x < w; x++ ) {
-				int B = pBuffer[pixelAdr]; // blue
-				int G = pBuffer[pixelAdr + 1]; // green
-				int R = pBuffer[pixelAdr + 2]; // red
-
-				// Linear + gamma 2.2
-				R = linAndGamma( R );
-				G = linAndGamma( G );
-				B = linAndGamma( B );
-
-				// Добавляем 2 первых пикселя
-				if( x == 0 ) {
-					image[h + 2][0] = FRAME_VALUE( R, G, B, defFrameValue );
-					image[h + 2][1] = FRAME_VALUE( R, G, B, defFrameValue );
-					image[h + 3][0] = FRAME_VALUE( R, G, B, defFrameValue );
-					image[h + 3][1] = FRAME_VALUE( R, G, B, defFrameValue );
-				}
-
-				// Добавляем 2 последних пикселя
-				if( x == w - 1 ) {
-					image[h + 2][w + 2] = FRAME_VALUE( R, G, B, defFrameValue );
-					image[h + 2][w + 3] = FRAME_VALUE( R, G, B, defFrameValue );
-					image[h + 3][w + 2] = FRAME_VALUE( R, G, B, defFrameValue );
-					image[h + 3][w + 3] = FRAME_VALUE( R, G, B, defFrameValue );
-				}
-
-				image[h + 2][x + ZeroLevel] = FRAME_VALUE( R, G, B, defFrameValue );
-				image[h + 3][x + ZeroLevel] = FRAME_VALUE( R, G, B, defFrameValue );
-
-				pixelAdr += bpp;
-			}
-		}
-
-		// Возвращаем на место
-		pixelAdr = baseAdr;
-		// Сама картинка
 		for( size_t x = 0; x < w; x++ ) {
 			int B = pBuffer[pixelAdr]; // blue
 			int G = pBuffer[pixelAdr + 1]; // green
 			int R = pBuffer[pixelAdr + 2]; // red
-
-			// Linear + gamma 2.2
-			R = linAndGamma( R );
-			G = linAndGamma( G );
-			B = linAndGamma( B );
-
-			// Добавляем 2 первых пикселя
-			if( x == 0 ) {
-				image[ZeroLevel + y][0] = FRAME_VALUE( R, G, B, defFrameValue );
-				image[ZeroLevel + y][1] = FRAME_VALUE( R, G, B, defFrameValue );
-			}
-
-			// Добавляем 2 последних пикселя
-			if( x == w - 1 ) {
-				image[ZeroLevel + y][w + 2] = FRAME_VALUE( R, G, B, defFrameValue );
-				image[ZeroLevel + y][w + 3] = FRAME_VALUE( R, G, B, defFrameValue );
-			}
 
 			image[ZeroLevel + y][ZeroLevel + x] = RGB( R, G, B );
 
@@ -126,8 +40,11 @@ CBayerPattern::CBayerPattern( const BitmapData& bmpData, int defFrameValue )
 		baseAdr += bpr;
 	}
 
-	height = h;
-	width = w;
+	// Экстраполируем
+	// Заполним значения сверху и снизу
+	fillUpperAndLowerEdges( defFrameValue );
+	// Заполним значения по бокам
+	fillLeftRightEdges( defFrameValue );
 }
 
 // Pixel Grouping алгоритм
@@ -138,9 +55,25 @@ void CBayerPattern::Process()
 	1. Сначала восстановим все незнакомые зеленые цвета.
 	2. Имея исхродное изображение, и весь восстановленный зеленый цвет - восстановим синий и красный
 	*/
-	wcout << "Now restoring green..." << endl;
+	/*
+	for( size_t i = 0; i < 10; ++i ) {
+		for( size_t j = 0; j < 10; ++j ) {
+			if( isGreenOnly( j, i ) ) {
+				wcout << "G ";
+			}
+			if( isRedOnly( j, i ) ) {
+				wcout << "R ";
+			}
+			if( isBlueOnly( j, i ) ) {
+				wcout << "B ";
+			}
+		}
+		wcout << endl;
+	}*/
+
+	wcout << L"Now restoring green..." << endl;
 	restoreGreen();
-	wcout << "Now restoring blue and red..." << endl;
+	wcout << L"Now restoring blue and red..." << endl;
 	restoreBlueRed();
 }
 
@@ -172,7 +105,7 @@ bool CBayerPattern::isBlueOnly( const size_t x, const size_t y ) const
 	return ( GetGValue( image[y][x] ) == 0 ) && ( GetRValue( image[y][x] ) == 0 );
 }
 
-bool CBayerPattern::isRedOnly( const size_t x, const size_t y )const
+bool CBayerPattern::isRedOnly( const size_t x, const size_t y ) const
 {
 	return ( GetBValue( image[y][x] ) == 0 ) && ( GetGValue( image[y][x] ) == 0 );
 }
@@ -186,6 +119,11 @@ void CBayerPattern::restoreGreen()
 {
 	for( size_t i = ZeroLevel; i < ZeroLevel + height; ++i ) {
 		for( size_t j = ZeroLevel; j < ZeroLevel + width; ++j ) {
+			if( isGreenOnly( j, i ) ) {
+				// Восстанавливаем только на голубых и красных рецепторах
+				continue;
+			}
+
 			int deltaN = 0;
 			int deltaE = 0;
 			int deltaW = 0;
@@ -203,9 +141,7 @@ void CBayerPattern::restoreGreen()
 				// deltaS
 				deltaS += abs( GetBValue( image[i][j] ) - GetBValue( image[i + 2][j] ) ) * 2 +
 					abs( GetGValue( image[i - 1][j] ) - GetGValue( image[i + 1][j] ) );
-			}
-
-			if( isRedOnly( j, i ) ) {
+			} else if( isRedOnly( j, i ) ) {
 				// deltaN
 				deltaN += abs( GetRValue( image[i][j] ) - GetRValue( image[i - 2][j] ) ) * 2 +
 					abs( GetGValue( image[i - 1][j] ) - GetGValue( image[i + 1][j] ) );
@@ -226,28 +162,21 @@ void CBayerPattern::restoreGreen()
 					( GetGValue( image[i - 1][j] ) * 3 + GetGValue( image[i + 1][j] ) +
 						isRedOnly( j, i ) ? GetRValue( image[i][j] ) - GetRValue( image[i - 2][j] ) : GetBValue( image[i][j] ) - GetBValue( image[i - 2][j] ) ) / 4,
 					GetBValue( image[i][j] ) );
-				continue;
-			}
-			if( smallestGrad == deltaE ) {
+			} else if( smallestGrad == deltaE ) {
 				image[i][j] = RGB( GetRValue( image[i][j] ),
 					( GetGValue( image[i][j + 1] ) * 3 + GetGValue( image[i][j - 1] ) +
 						isRedOnly( j, i ) ? GetRValue( image[i][j] ) - GetRValue( image[i][j + 2] ) : GetBValue( image[i][j] ) - GetBValue( image[i][j + 2] ) ) / 4,
 					GetBValue( image[i][j] ) );
-				continue;
-			}
-			if( smallestGrad == deltaW ) {
+			} else if( smallestGrad == deltaW ) {
 				image[i][j] = RGB( GetRValue( image[i][j] ),
 					( GetGValue( image[i][j - 1] ) * 3 + GetGValue( image[i][j + 1] ) +
 						isRedOnly( j, i ) ? GetRValue( image[i][j] ) - GetRValue( image[i][j - 2] ) : GetBValue( image[i][j] ) - GetBValue( image[i][j - 2] ) ) / 4,
 					GetBValue( image[i][j] ) );
-				continue;
-			}
-			if( smallestGrad == deltaS ) {
+			} else if( smallestGrad == deltaS ) {
 				image[i][j] = RGB( GetRValue( image[i][j] ),
 					( GetGValue( image[i + 1][j] ) * 3 + GetGValue( image[i - 1][j] ) +
 						isRedOnly( j, i ) ? GetRValue( image[i][j] ) - GetRValue( image[i + 2][j] ) : GetBValue( image[i][j] ) - GetBValue( image[i + 2][j] ) ) / 4,
 					GetBValue( image[i][j] ) );
-				continue;
 			}
 		}
 	}
@@ -299,11 +228,11 @@ void CBayerPattern::computeBlueAtRed()
 					image[i][j] = RGB( GetRValue( image[i][j] ),
 						GetGValue( image[i][j] ),
 						hueTransit( GetGValue( image[i - 1][j + 1] ), GetGValue( image[i][j] ), GetGValue( image[i + 1][j - 1] ), GetBValue( image[i - 1][j + 1] ), GetBValue( image[i + 1][j - 1] ) ) );
-				}
-				if( smallestGrad == deltaNW ) {
+				} else if( smallestGrad == deltaNW ) {
 					image[i][j] = RGB( GetRValue( image[i][j] ),
 						GetGValue( image[i][j] ),
 						hueTransit( GetGValue( image[i - 1][j - 1] ), GetGValue( image[i][j] ), GetGValue( image[i + 1][j + 1] ), GetBValue( image[i - 1][j - 1] ), GetBValue( image[i + 1][j + 1] ) ) );
+					continue;
 				}
 			}
 		}
@@ -330,11 +259,11 @@ void CBayerPattern::computeRedAtBlue()
 					image[i][j] = RGB( hueTransit( GetGValue( image[i - 1][j + 1] ), GetGValue( image[i][j] ), GetGValue( image[i + 1][j - 1] ), GetRValue( image[i - 1][j + 1] ), GetRValue( image[i + 1][j - 1] ) ),
 						GetGValue( image[i][j] ),
 						GetBValue( image[i][j] ) );
-				}
-				if( smallestGrad == deltaNW ) {
+				} else if( smallestGrad == deltaNW ) {
 					image[i][j] = RGB( hueTransit( GetGValue( image[i - 1][j - 1] ), GetGValue( image[i][j] ), GetGValue( image[i + 1][j + 1] ), GetRValue( image[i - 1][j - 1] ), GetRValue( image[i + 1][j + 1] ) ),
 						GetGValue( image[i][j] ),
 						GetBValue( image[i][j] ) );
+					continue;
 				}
 			}
 		}
@@ -350,18 +279,140 @@ int CBayerPattern::hueTransit( int l1, int l2, int l3, int v1, int v3 ) const
 	}
 }
 
-void CBayerPattern::gammaCorrection( double gamma )
+// Если яркость в узком диапазоне
+void CBayerPattern::colorCorrection()
 {
-	for( size_t i = 0; i < height + 4; ++i ) {
-		for( size_t j = 0; j < width + 4; ++j ) {
-			image[i][j] = RGB( pow( GetRValue( image[i][j] ), gamma ),
-				pow( GetGValue( image[i][j] ), gamma ),
-				pow( GetBValue( image[i][j] ), gamma ) );
+	int Rmin = 255;
+	int Gmin = 255;
+	int Bmin = 255;
+	int Rmax = 0;
+	int Gmax = 0;
+	int Bmax = 0;
+	for( size_t i = ZeroLevel; i < ZeroLevel + height; ++i ) {
+		for( size_t j = ZeroLevel; j < ZeroLevel + width; ++j ) {
+			int R = GetRValue( image[i][j] );
+			int G = GetGValue( image[i][j] );
+			int B = GetBValue( image[i][j] );
+
+			if( R < Rmin ) {
+				Rmin = R;
+			}
+			if( G < Gmin ) {
+				Gmin = G;
+			}
+			if( B < Bmin ) {
+				Bmin = B;
+			}
+
+			if( R > Rmax ) {
+				Rmax = R;
+			}
+			if( G > Gmax ) {
+				Gmax = G;
+			}
+			if( B > Bmax ) {
+				Bmax = B;
+			}
+		}
+	}
+
+	for( size_t i = ZeroLevel; i < ZeroLevel + height; ++i ) {
+		for( size_t j = ZeroLevel; j < ZeroLevel + width; ++j ) {
+			image[i][j] = RGB( ( GetRValue( image[i][j] ) - Rmin ) * ( 255 / ( ( Rmax - Rmin ) ) ),
+				( GetGValue( image[i][j] ) - Gmin ) * ( 255 / ( Gmax - Gmin ) ),
+				( GetBValue( image[i][j] ) - Bmin ) * ( 255 / ( Bmax - Bmin ) ) );
 		}
 	}
 }
 
-int CBayerPattern::linAndGamma( int value )
+void CBayerPattern::grayWorld()
 {
-	return static_cast<int> (pow( value, 2.2 ) * 255 / pow( 255, 2.2 ) );
+	int sumR = 0;
+	int sumG = 0;
+	int sumB = 0;
+	int counter = 0;
+	for( size_t i = ZeroLevel; i < ZeroLevel + height; ++i ) {
+		for( size_t j = ZeroLevel; j < ZeroLevel + width; ++j ) {
+			++counter;
+			sumR += GetRValue( image[i][j] );
+			sumG += GetGValue( image[i][j] );
+			sumB += GetBValue( image[i][j] );
+		}
+	}
+	int avgR = sumR / counter;
+	int avgG = sumG / counter;
+	int avgB = sumB / counter;
+	int average = ( avgR + avgG + avgB ) / 3;
+	for( size_t i = ZeroLevel; i < ZeroLevel + height; ++i ) {
+		for( size_t j = ZeroLevel; j < ZeroLevel + width; ++j ) {
+			image[i][j] = RGB( GetRValue( image[i][j] ) * average / avgR,
+				GetGValue( image[i][j] ) * average / avgG,
+				GetBValue( image[i][j] ) * average / avgB );
+		}
+	}
+}
+
+void CBayerPattern::gammaCorrection( double gama )
+{
+	for( size_t i = 0; i < 4 + height; ++i ) {
+		for( size_t j = 0; j < 4 + width; ++j ) {
+			image[i][j] = RGB( pow( GetRValue( image[i][j] ) / 255.0, gama ) * 255,
+				pow( GetGValue( image[i][j] ) / 255.0, gama ) * 255,
+				pow( GetBValue( image[i][j] ) / 255.0, gama ) * 255 );
+		}
+	}
+}
+
+// Заполним значения по бокам
+void CBayerPattern::fillLeftRightEdges( int defFrameValue )
+{
+	for( size_t i = 0; i < height + 4; ++i ) {
+		image[i][0] = FRAME_VALUE(
+			GetRValue( image[i][ZeroLevel] ),
+			GetGValue( image[i][ZeroLevel] ),
+			GetBValue( image[i][ZeroLevel] ),
+			defFrameValue );
+		image[i][1] = FRAME_VALUE(
+			GetRValue( image[i][ZeroLevel + 1] ),
+			GetGValue( image[i][ZeroLevel + 1] ),
+			GetBValue( image[i][ZeroLevel + 1] ),
+			defFrameValue );
+		image[i][width + 3] = FRAME_VALUE(
+			GetRValue( image[i][width + 3 - ZeroLevel] ),
+			GetGValue( image[i][width + 3 - ZeroLevel] ),
+			GetBValue( image[i][width + 3 - ZeroLevel] ),
+			defFrameValue );
+		image[i][width + 2] = FRAME_VALUE(
+			GetRValue( image[i][width + 2 - ZeroLevel] ),
+			GetGValue( image[i][width + 2 - ZeroLevel] ),
+			GetBValue( image[i][width + 2 - ZeroLevel] ),
+			defFrameValue );
+	}
+}
+
+// Заполним значения сверху и снизу
+void CBayerPattern::fillUpperAndLowerEdges( int defFrameValue )
+{
+	for( size_t x = ZeroLevel; x < ZeroLevel + width; ++x ) {
+		image[0][x] = FRAME_VALUE(
+			GetRValue( image[ZeroLevel][x] ),
+			GetGValue( image[ZeroLevel][x] ),
+			GetBValue( image[ZeroLevel][x] ),
+			defFrameValue );
+		image[1][x] = FRAME_VALUE(
+			GetRValue( image[ZeroLevel + 1][x] ),
+			GetGValue( image[ZeroLevel + 1][x] ),
+			GetBValue( image[ZeroLevel + 1][x] ),
+			defFrameValue );
+		image[height + 2][x] = FRAME_VALUE(
+			GetRValue( image[ZeroLevel + height - 2][x] ),
+			GetGValue( image[ZeroLevel + height - 2][x] ),
+			GetBValue( image[ZeroLevel + height - 2][x] ),
+			defFrameValue );
+		image[height + 3][x] = FRAME_VALUE(
+			GetRValue( image[ZeroLevel + height - 1][x] ),
+			GetGValue( image[ZeroLevel + height - 1][x] ),
+			GetBValue( image[ZeroLevel + height - 1][x] ),
+			defFrameValue );
+	}
 }

@@ -53,7 +53,7 @@ int wmain( int argc, wchar_t* argv[] )
 			wcout << L"File:" << argv[1] << endl;
 		}
 
-		CBayerPattern image( bmpData, 255 );
+		CBayerPattern image( bmpData );
 		image.Process();
 		wcout << L"Processing done" << endl;
 		image.GetData( bmpData );

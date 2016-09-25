@@ -6,10 +6,6 @@
 #include <time.h>
 #include <vector>
 
-// ≈сли значение по умолчанию дл€ рамки не задано, то боковые строчки будут экстраполированы на 2 пиксел€ во все стороны,
-// если задано - то def - значение этих пикселей
-#define FRAME_VALUE(R, G, B, def) def == -1 ? RGB(R, G, B) : def;
-
 typedef std::vector< std::vector< COLORREF > > TImage;
 
 using namespace Gdiplus;
@@ -27,7 +23,7 @@ public:
 	void GetData( BitmapData& bmpData ) const;
 
 private:
-	// »зображение размера height + 4 X width + 4
+	// »зображение размера (height + 4) X (width + 4)
 	// так как не хочу думать что будет с крайними пиксел€ми.
 	// —о всех сторон на 2 строки пиксели просто дублируютс€.
 	TImage image;
@@ -43,6 +39,9 @@ private:
 	bool isGreenOnly( const size_t x, const size_t y ) const;
 	bool isRedOnly( const size_t x, const size_t y ) const;
 	int hueTransit( int l1, int l2, int l3, int v1, int v3 ) const;
-	void gammaCorrection( double gamma );
-	int linAndGamma( int value );
+	void colorCorrection();
+	void grayWorld();
+	void gammaCorrection( double gama );
+	void fillLeftRightEdges( int defFrameValue );
+	void fillUpperAndLowerEdges( int defFrameValue );
 };
