@@ -1,13 +1,24 @@
 #include <BayerPattern.h>
 #include <cstdlib>
 #include <cassert>
+#include <algorithm>
 
 // Ќа 2 пиксел€ увеличим изображени€ со всех сторон
 const int ZeroLevel = 2;
 
+// Ѕоремс€ с переполнением
+BYTE toBYTE( int x )
+{
+	if( x > 255 ) return 255;
+	if( x < 0 ) return 0;
+	return ( BYTE ) x;
+}
+
+// ƒелаем RGB, с проверкой переполнени€ сигнала в канале
+#define SAFE_RGB(R, G, B) RGB(toBYTE(R), toBYTE(G), toBYTE(B))
 // ≈сли значение по умолчанию дл€ рамки не задано, то боковые строчки будут экстраполированы на 2 пиксел€ во все стороны,
 // если задано - то def - значение этих пикселей
-#define FRAME_VALUE(R, G, B, def) def == -1 ? RGB(R, G, B) : def;
+#define FRAME_VALUE(R, G, B, def) def == -1 ? SAFE_RGB(R, G, B) : def;
 
 CBayerPattern::CBayerPattern( const BitmapData& bmpData, int defFrameValue )
 {
@@ -34,7 +45,7 @@ CBayerPattern::CBayerPattern( const BitmapData& bmpData, int defFrameValue )
 			int G = pBuffer[pixelAdr + 1]; // green
 			int R = pBuffer[pixelAdr + 2]; // red
 
-			image[ZeroLevel + y][ZeroLevel + x] = RGB( R, G, B );
+			image[ZeroLevel + y][ZeroLevel + x] = SAFE_RGB( R, G, B );
 
 			pixelAdr += bpp;
 		}
@@ -85,6 +96,26 @@ void CBayerPattern::GetData( BitmapData& bmpData ) const
 	}
 }
 
+std::vector<int> CBayerPattern::GetGist() const
+{
+	const int LumaRed = 9798;
+	const int LumaGreen = 19235;
+	const int LumaBlue = 3735;
+	const int CoeffNormalizationBitsCount = 15;
+	const int CoeffNormalization = 1 << CoeffNormalizationBitsCount;
+	std::vector<int> hist( 256, 0 );
+	for( size_t i = ZeroLevel; i < ZeroLevel + height; ++i ) {
+		for( size_t j = ZeroLevel; j < ZeroLevel + width; ++j ) {
+			int r = GetRValue( image[i][j] );
+			int g = GetGValue( image[i][j] );
+			int b = GetBValue( image[i][j] );
+			int y = ( LumaRed * r + LumaGreen * g + LumaBlue * b + ( CoeffNormalization >> 1 ) ) >> CoeffNormalizationBitsCount;
+			++hist[y];
+		}
+	}
+	return hist;
+}
+
 bool CBayerPattern::isBlueOnly( const size_t x, const size_t y ) const
 {
 	return ( GetGValue( image[y][x] ) == 0 ) && ( GetRValue( image[y][x] ) == 0 );
@@ -100,6 +131,7 @@ bool CBayerPattern::isGreenOnly( const size_t x, const size_t y ) const
 	return ( GetBValue( image[y][x] ) == 0 ) && ( GetRValue( image[y][x] ) == 0 );
 }
 
+// ????????????????????????????
 void CBayerPattern::restoreGreen()
 {
 	for( size_t i = ZeroLevel; i < ZeroLevel + height; ++i ) {
@@ -112,67 +144,79 @@ void CBayerPattern::restoreGreen()
 			int deltaE = 0;
 			int deltaW = 0;
 			int deltaS = 0;
-			if( isRedOnly( j, i ) ) {
+			if( isRedOnly( j, i ) ) {          //   0 1 2 3
+				
+				//1383 1340
+				// 1365 1304
 				// deltaN
-				deltaN += abs( GetRValue( image[i][j] ) - GetRValue( image[i - 2][j] ) ) * 2 +
+				deltaN = abs( GetRValue( image[i][j] ) - GetRValue( image[i - 2][j] ) ) * 2 +
 					abs( GetGValue( image[i - 1][j] ) - GetGValue( image[i + 1][j] ) );
 				// deltaE
-				deltaE += abs( GetRValue( image[i][j] ) - GetRValue( image[i][j + 2] ) ) * 2 +
+				deltaE = abs( GetRValue( image[i][j] ) - GetRValue( image[i][j + 2] ) ) * 2 +
 					abs( GetGValue( image[i][j - 1] ) - GetGValue( image[i][j + 1] ) );
 				// deltaW
-				deltaW += abs( GetRValue( image[i][j] ) - GetRValue( image[i][j - 2] ) ) * 2 +
+				deltaW = abs( GetRValue( image[i][j] ) - GetRValue( image[i][j - 2] ) ) * 2 +
 					abs( GetGValue( image[i][j - 1] ) - GetGValue( image[i][j + 1] ) );
 				// deltaS
-				deltaS += abs( GetRValue( image[i][j] ) - GetRValue( image[i + 2][j] ) ) * 2 +
+				deltaS = abs( GetRValue( image[i][j] ) - GetRValue( image[i + 2][j] ) ) * 2 +
 					abs( GetGValue( image[i - 1][j] ) - GetGValue( image[i + 1][j] ) );
+				// !!!!!!!!!!!!!!!!!!!! TODO
 				int smallestGrad = min( deltaN, min( deltaE, min( deltaW, deltaS ) ) );
 				if( smallestGrad == deltaN ) {
-					image[i][j] = RGB( GetRValue( image[i][j] ),
+					image[i][j] = SAFE_RGB( 
+						GetRValue( image[i][j] ),
 						( GetGValue( image[i - 1][j] ) * 3 + GetGValue( image[i + 1][j] ) + GetRValue( image[i][j] ) - GetRValue( image[i - 2][j] ) ) / 4,
 						GetBValue( image[i][j] ) );
 				} else if( smallestGrad == deltaE ) {
-					image[i][j] = RGB( GetRValue( image[i][j] ),
+					image[i][j] = SAFE_RGB(
+						GetRValue( image[i][j] ),
 						( GetGValue( image[i][j + 1] ) * 3 + GetGValue( image[i][j - 1] ) + GetRValue( image[i][j] ) - GetRValue( image[i][j + 2] ) ) / 4,
 						GetBValue( image[i][j] ) );
 				} else if( smallestGrad == deltaW ) {
-					image[i][j] = RGB( GetRValue( image[i][j] ),
+					image[i][j] = SAFE_RGB( 
+						GetRValue( image[i][j] ),
 						( GetGValue( image[i][j - 1] ) * 3 + GetGValue( image[i][j + 1] ) + GetRValue( image[i][j] ) - GetRValue( image[i][j - 2] ) ) / 4,
 						GetBValue( image[i][j] ) );
 				} else if( smallestGrad == deltaS ) {
-					image[i][j] = RGB( GetRValue( image[i][j] ),
+					image[i][j] = SAFE_RGB( 
+						GetRValue( image[i][j] ),
 						( GetGValue( image[i + 1][j] ) * 3 + GetGValue( image[i - 1][j] ) + GetRValue( image[i][j] ) - GetRValue( image[i + 2][j] ) ) / 4,
 						GetBValue( image[i][j] ) );
+				} else {
+					assert( false );
 				}
 			} else if( isBlueOnly( j, i ) ) {
 				// deltaN
-				deltaN += abs( GetBValue( image[i][j] ) - GetBValue( image[i - 2][j] ) ) * 2 +
+				deltaN = abs( GetBValue( image[i][j] ) - GetBValue( image[i - 2][j] ) ) * 2 +
 					abs( GetGValue( image[i - 1][j] ) - GetGValue( image[i + 1][j] ) );
 				// deltaE
-				deltaE += abs( GetBValue( image[i][j] ) - GetBValue( image[i][j + 2] ) ) * 2 +
+				deltaE = abs( GetBValue( image[i][j] ) - GetBValue( image[i][j + 2] ) ) * 2 +
 					abs( GetGValue( image[i][j - 1] ) - GetGValue( image[i][j + 1] ) );
 				// deltaW
-				deltaW += abs( GetBValue( image[i][j] ) - GetBValue( image[i][j - 2] ) ) * 2 +
+				deltaW = abs( GetBValue( image[i][j] ) - GetBValue( image[i][j - 2] ) ) * 2 +
 					abs( GetGValue( image[i][j - 1] ) - GetGValue( image[i][j + 1] ) );
 				// deltaS
-				deltaS += abs( GetBValue( image[i][j] ) - GetBValue( image[i + 2][j] ) ) * 2 +
+				deltaS = abs( GetBValue( image[i][j] ) - GetBValue( image[i + 2][j] ) ) * 2 +
 					abs( GetGValue( image[i - 1][j] ) - GetGValue( image[i + 1][j] ) );
 				int smallestGrad = min( deltaN, min( deltaE, min( deltaW, deltaS ) ) );
 				if( smallestGrad == deltaN ) {
-					image[i][j] = RGB( GetRValue( image[i][j] ),
+					image[i][j] = SAFE_RGB( GetRValue( image[i][j] ),
 						( GetGValue( image[i - 1][j] ) * 3 + GetGValue( image[i + 1][j] ) + GetBValue( image[i][j] ) - GetBValue( image[i - 2][j] ) ) / 4,
 						GetBValue( image[i][j] ) );
 				} else if( smallestGrad == deltaE ) {
-					image[i][j] = RGB( GetRValue( image[i][j] ),
+					image[i][j] = SAFE_RGB( GetRValue( image[i][j] ),
 						( GetGValue( image[i][j + 1] ) * 3 + GetGValue( image[i][j - 1] ) + GetBValue( image[i][j] ) - GetBValue( image[i][j + 2] ) ) / 4,
 						GetBValue( image[i][j] ) );
 				} else if( smallestGrad == deltaW ) {
-					image[i][j] = RGB( GetRValue( image[i][j] ),
+					image[i][j] = SAFE_RGB( GetRValue( image[i][j] ),
 						( GetGValue( image[i][j - 1] ) * 3 + GetGValue( image[i][j + 1] ) + GetBValue( image[i][j] ) - GetBValue( image[i][j - 2] ) ) / 4,
 						GetBValue( image[i][j] ) );
 				} else if( smallestGrad == deltaS ) {
-					image[i][j] = RGB( GetRValue( image[i][j] ),
+					image[i][j] = SAFE_RGB( GetRValue( image[i][j] ),
 						( GetGValue( image[i + 1][j] ) * 3 + GetGValue( image[i - 1][j] ) + GetBValue( image[i][j] ) - GetBValue( image[i + 2][j] ) ) / 4,
 						GetBValue( image[i][j] ) );
+				} else {
+					assert( false );
 				}
 			} else {
 				assert( false );
@@ -194,14 +238,21 @@ void CBayerPattern::restoreBlueRed()
 	computeRedAtBlue();
 }
 
+// +++++++++++++++++++++++++++++++++++++++
 void CBayerPattern::computeRedBlueAtGreen()
 {
 	for( size_t i = ZeroLevel; i < ZeroLevel + height; ++i ) {
 		for( size_t j = ZeroLevel; j < ZeroLevel + width; ++j ) {
 			if( isGreenOnly( j, i ) ) {
-				image[i][j] = RGB( hueTransit( GetGValue( image[i - 1][j] ), GetGValue( image[i][j] ), GetGValue( image[i + 1][j] ), GetRValue( image[i - 1][j] ), GetRValue( image[i + 1][j] ) ),
+				if( j == 1389 && i == 1036 ) { // 0 R G  R G
+					DebugBreak();              // 1 G B  G B
+				}
+				int r = hueTransit( GetGValue( image[i - 1][j] ), GetGValue( image[i][j] ), GetGValue( image[i + 1][j] ), GetRValue( image[i - 1][j] ), GetRValue( image[i + 1][j] ) );
+				int b = hueTransit( GetGValue( image[i][j - 1] ), GetGValue( image[i][j] ), GetGValue( image[i][j + 1] ), GetBValue( image[i][j - 1] ), GetBValue( image[i][j + 1] ) );
+				image[i][j] = SAFE_RGB( 
+					r,
 					GetGValue( image[i][j] ),
-					hueTransit( GetGValue( image[i][j - 1] ), GetGValue( image[i][j] ), GetGValue( image[i][j + 1] ), GetBValue( image[i][j - 1] ), GetBValue( image[i][j + 1] ) ) );
+					b );
 			}
 		}
 	}
@@ -224,11 +275,11 @@ void CBayerPattern::computeBlueAtRed()
 					abs( GetGValue( image[i][j] ) - GetGValue( image[i + 1][j + 1] ) );
 				int smallestGrad = min( deltaNE, deltaNW );
 				if( smallestGrad == deltaNE ) {
-					image[i][j] = RGB( GetRValue( image[i][j] ),
+					image[i][j] = SAFE_RGB( GetRValue( image[i][j] ),
 						GetGValue( image[i][j] ),
 						hueTransit( GetGValue( image[i - 1][j + 1] ), GetGValue( image[i][j] ), GetGValue( image[i + 1][j - 1] ), GetBValue( image[i - 1][j + 1] ), GetBValue( image[i + 1][j - 1] ) ) );
 				} else if( smallestGrad == deltaNW ) {
-					image[i][j] = RGB( GetRValue( image[i][j] ),
+					image[i][j] = SAFE_RGB( GetRValue( image[i][j] ),
 						GetGValue( image[i][j] ),
 						hueTransit( GetGValue( image[i - 1][j - 1] ), GetGValue( image[i][j] ), GetGValue( image[i + 1][j + 1] ), GetBValue( image[i - 1][j - 1] ), GetBValue( image[i + 1][j + 1] ) ) );
 				}
@@ -254,11 +305,11 @@ void CBayerPattern::computeRedAtBlue()
 					abs( GetGValue( image[i][j] ) - GetGValue( image[i + 1][j + 1] ) );
 				int smallestGrad = min( deltaNE, deltaNW );
 				if( smallestGrad == deltaNE ) {
-					image[i][j] = RGB( hueTransit( GetGValue( image[i - 1][j + 1] ), GetGValue( image[i][j] ), GetGValue( image[i + 1][j - 1] ), GetRValue( image[i - 1][j + 1] ), GetRValue( image[i + 1][j - 1] ) ),
+					image[i][j] = SAFE_RGB( hueTransit( GetGValue( image[i - 1][j + 1] ), GetGValue( image[i][j] ), GetGValue( image[i + 1][j - 1] ), GetRValue( image[i - 1][j + 1] ), GetRValue( image[i + 1][j - 1] ) ),
 						GetGValue( image[i][j] ),
 						GetBValue( image[i][j] ) );
 				} else if( smallestGrad == deltaNW ) {
-					image[i][j] = RGB( hueTransit( GetGValue( image[i - 1][j - 1] ), GetGValue( image[i][j] ), GetGValue( image[i + 1][j + 1] ), GetRValue( image[i - 1][j - 1] ), GetRValue( image[i + 1][j + 1] ) ),
+					image[i][j] = SAFE_RGB( hueTransit( GetGValue( image[i - 1][j - 1] ), GetGValue( image[i][j] ), GetGValue( image[i + 1][j + 1] ), GetRValue( image[i - 1][j - 1] ), GetRValue( image[i + 1][j + 1] ) ),
 						GetGValue( image[i][j] ),
 						GetBValue( image[i][j] ) );
 				}
@@ -267,6 +318,7 @@ void CBayerPattern::computeRedAtBlue()
 	}
 }
 
+//+++++++++++++++++++++++++++++++++++++++++++++++++++
 int CBayerPattern::hueTransit( int l1, int l2, int l3, int v1, int v3 ) const
 {
 	if( ( ( l1 < l2 ) && ( l2 < l3 ) ) || ( ( l1 > l2 ) && ( l2 > l3 ) ) ) {
@@ -276,40 +328,13 @@ int CBayerPattern::hueTransit( int l1, int l2, int l3, int v1, int v3 ) const
 	}
 }
 
-void CBayerPattern::grayWorld()
-{
-	int sumR = 0;
-	int sumG = 0;
-	int sumB = 0;
-	int counter = 0;
-	for( size_t i = ZeroLevel; i < ZeroLevel + height; ++i ) {
-		for( size_t j = ZeroLevel; j < ZeroLevel + width; ++j ) {
-			++counter;
-			sumR += GetRValue( image[i][j] );
-			sumG += GetGValue( image[i][j] );
-			sumB += GetBValue( image[i][j] );
-		}
-	}
-	int avgR = sumR / counter;
-	int avgG = sumG / counter;
-	int avgB = sumB / counter;
-	int average = ( avgR + avgG + avgB ) / 3;
-	for( size_t i = ZeroLevel; i < ZeroLevel + height; ++i ) {
-		for( size_t j = ZeroLevel; j < ZeroLevel + width; ++j ) {
-			image[i][j] = RGB( GetRValue( image[i][j] ) * average / avgR,
-				GetGValue( image[i][j] ) * average / avgG,
-				GetBValue( image[i][j] ) * average / avgB );
-		}
-	}
-}
-
 void CBayerPattern::gammaCorrection( double gama )
 {
 	for( size_t i = 0; i < 4 + height; ++i ) {
 		for( size_t j = 0; j < 4 + width; ++j ) {
-			image[i][j] = RGB( pow( GetRValue( image[i][j] ) / 255.0, gama ) * 255,
-				pow( GetGValue( image[i][j] ) / 255.0, gama ) * 255,
-				pow( GetBValue( image[i][j] ) / 255.0, gama ) * 255 );
+			image[i][j] = SAFE_RGB( ( int ) pow( GetRValue( image[i][j] ) / 255.0, gama ) * 255,
+				( int ) pow( GetGValue( image[i][j] ) / 255.0, gama ) * 255,
+				( int ) pow( GetBValue( image[i][j] ) / 255.0, gama ) * 255 );
 		}
 	}
 }

@@ -21,6 +21,7 @@ public:
 	void Process();
 
 	void GetData( BitmapData& bmpData ) const;
+	std::vector<int> GetGist() const;
 
 private:
 	// Изображение размера (height + 4) X (width + 4)
@@ -29,6 +30,9 @@ private:
 	TImage image;
 	size_t height;
 	size_t width;
+
+	void fillLeftRightEdges( int defFrameValue );
+	void fillUpperAndLowerEdges( int defFrameValue );
 
 	void restoreGreen();
 	void restoreBlueRed();
@@ -39,9 +43,6 @@ private:
 	bool isGreenOnly( const size_t x, const size_t y ) const;
 	bool isRedOnly( const size_t x, const size_t y ) const;
 	int hueTransit( int l1, int l2, int l3, int v1, int v3 ) const;
-	void colorCorrection();
-	void grayWorld();
+
 	void gammaCorrection( double gama );
-	void fillLeftRightEdges( int defFrameValue );
-	void fillUpperAndLowerEdges( int defFrameValue );
 };

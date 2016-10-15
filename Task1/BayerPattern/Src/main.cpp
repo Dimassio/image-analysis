@@ -52,6 +52,10 @@ double getPeakSignalToNoizeRatio( const BitmapData& noizedImage, const BitmapDat
 	for( size_t y = 0; y < h; y++ ) {
 		int pixelAdr = baseAdr;
 		for( size_t x = 0; x < w; x++ ) {
+			if( ( x < w / 4 || x > 3 * w / 4 ) ) {
+				pixelAdr += bpp;
+				continue;
+			}
 			int BNoized = pBufferNoized[pixelAdr]; // blue
 			int GNoized = pBufferNoized[pixelAdr + 1]; // green
 			int RNoized = pBufferNoized[pixelAdr + 2]; // red
@@ -130,7 +134,8 @@ int wmain( int argc, wchar_t* argv[] )
 		image.Process();
 		wcout << L"Processing done" << endl;
 		image.GetData( bmpDataSource );
-
+		
+	
 		// Ñ×ÈÒÀÅÌ ÊÀ×ÅÑÒÂÎ
 		wcout << L"Calculating PSNR..." << endl;
 		double PSNR = getPeakSignalToNoizeRatio( bmpDataSource, bmpDataOriginal );
