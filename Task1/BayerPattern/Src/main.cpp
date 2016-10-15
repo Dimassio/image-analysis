@@ -80,16 +80,6 @@ double getPeakSignalToNoizeRatio( const BitmapData& noizedImage, const BitmapDat
 
 	return PSNR;
 }
-/*
-Bitmap* cropBitmap( const Bitmap* oldBmp )
-{
-	int newWidth = ( oldBmp->GetWidth() * 3 / 4 + 120 ) - ( oldBmp->GetWidth() / 4 - 120 );
-	int newHeight = oldBmp->GetHeight();
-
-	Bitmap *pCloneBmp = oldBmp->Clone( oldBmp->GetWidth() / 4 - 120, 0, newWidth, newHeight, oldBmp->GetPixelFormat() );
-	return pCloneBmp;
-	//pCloneBmp->Save( argv[2], &clsId, 0 );
-}*/
 
 int wmain( int argc, wchar_t* argv[] )
 {

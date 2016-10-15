@@ -35,6 +35,9 @@ private:
 	void fillUpperAndLowerEdges( int defFrameValue );
 
 	void restoreGreen();
+	void restoreGreenOnBlue();
+	void restoreGreenOnRed();
+
 	void restoreBlueRed();
 	void computeRedBlueAtGreen();
 	void computeBlueAtRed();
