@@ -49,13 +49,9 @@ double getPeakSignalToNoizeRatio( const BitmapData& noizedImage, const BitmapDat
 	double MSE = 0.0;
 	int baseAdr = 0;
 	int numOfPixels = 0;
-	for( size_t y = 0; y < h; y++ ) {
+	for( size_t y = 0; y < h; ++y ) {
 		int pixelAdr = baseAdr;
-		for( size_t x = 0; x < w; x++ ) {
-			if( ( x < w / 4 || x > 3 * w / 4 ) ) {
-				pixelAdr += bpp;
-				continue;
-			}
+		for( size_t x = 0; x < w; ++x ) {
 			int BNoized = pBufferNoized[pixelAdr]; // blue
 			int GNoized = pBufferNoized[pixelAdr + 1]; // green
 			int RNoized = pBufferNoized[pixelAdr + 2]; // red
@@ -84,9 +80,10 @@ double getPeakSignalToNoizeRatio( const BitmapData& noizedImage, const BitmapDat
 int wmain( int argc, wchar_t* argv[] )
 {
 	if( argc != 4 ) {
-		wcout << L"Usage: BayerPattern <inputFile.bmp> <outputFile.bmp> <RealImage.bmp>" << endl;
-		return 0;
+		wcout << L"Usage: BayerPattern <inputFile.bmp> <outputFile.bmp> <originalImage.bmp>" << endl;
+		return 1;
 	}
+
 	wchar_t* source = argv[1];
 	wchar_t* destination = argv[2];
 	wchar_t* original = argv[3];
@@ -100,6 +97,9 @@ int wmain( int argc, wchar_t* argv[] )
 		Bitmap GDIBitmapOriginal( original );
 		int w = GDIBitmapSource.GetWidth();
 		int h = GDIBitmapSource.GetHeight();
+		
+		assert( w == GDIBitmapOriginal.GetWidth() && h == GDIBitmapOriginal.GetHeight() );
+		
 		BitmapData bmpDataSource;
 		BitmapData bmpDataOriginal;
 		// Whole image
@@ -107,26 +107,25 @@ int wmain( int argc, wchar_t* argv[] )
 		// Äëÿ èñõîäíîãî
 		if( Ok != GDIBitmapSource.LockBits( &rc, ImageLockModeRead | ImageLockModeWrite, PixelFormat24bppRGB, &bmpDataSource ) ) {
 			wcout << L"Failed to lock image: " << argv[1] << endl;
-			return -1;
+			return 1;
 		} else {
 			wcout << L"Source file:" << argv[1] << endl;
 		}
 		// Äëÿ îðèãèíàëüíîãî èçîáðàæåíèÿ
 		if( Ok != GDIBitmapOriginal.LockBits( &rc, ImageLockModeRead | ImageLockModeWrite, PixelFormat24bppRGB, &bmpDataOriginal ) ) {
 			wcout << L"Failed to lock image: " << argv[3] << endl;
-			return -1;
+			return 1;
 		} else {
 			wcout << L"Original file:" << argv[3] << endl;
 		}
 
-		// ÂÎÑÑÒÀÍÀÂËÈÂÀÅÌ ÈÇÎÁÐÀÆÅÍÈÅ
+		// Âîññòàíàâëèâàåì èçîáðàæåíèå
 		CBayerPattern image( bmpDataSource );
 		image.Process();
 		wcout << L"Processing done" << endl;
 		image.GetData( bmpDataSource );
 		
-	
-		// Ñ×ÈÒÀÅÌ ÊÀ×ÅÑÒÂÎ
+		// Ñ÷èòàåì êà÷åñòâî
 		wcout << L"Calculating PSNR..." << endl;
 		double PSNR = getPeakSignalToNoizeRatio( bmpDataSource, bmpDataOriginal );
 		wcout << L"PSNR is: " << PSNR << endl;
@@ -141,7 +140,6 @@ int wmain( int argc, wchar_t* argv[] )
 	}
 
 	GdiplusShutdown( gdiplusToken );
-
 
 	return 0;
 }
