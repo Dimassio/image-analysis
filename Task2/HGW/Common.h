@@ -7,4 +7,5 @@
 
 using namespace Gdiplus;
 using std::wcout;
+using std::wcin;
 using std::endl;
