@@ -58,10 +58,10 @@ int wmain( int argc, wchar_t* argv[] )
 			wcout << L"Source file:" << argv[1] << endl;
 		}
 
-		size_t filterSize;
-		wcin >> filterSize;
+		size_t filterSize = 5;
+		//wcin >> filterSize;
 		// Processing
-		MorphOp( bmpDataSource, 2 * filterSize );
+		MorphOp( bmpDataSource, filterSize );
 	
 		GDIBitmapSource.UnlockBits( &bmpDataSource );
 

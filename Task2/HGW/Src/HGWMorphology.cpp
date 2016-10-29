@@ -1,56 +1,55 @@
 #include <HGWMorphology.h>
+#include <cstdlib>
 
-void buildRaw( std::vector<BYTE>& raw, std::vector<BYTE>& image, const size_t filterSize,  bool straightDirection )
+std::vector<BYTE> calculateHGW( const std::vector<BYTE>& a, const size_t filterSize )
 {
-	const size_t w = image.size();
-	if( !straightDirection ) {
-		for( size_t i = 0; i < w / 2; ++i ) {
-			std::swap( image[i], image[w - i - 1] );
+	// todo: дополнить справа и слева 0ми или просто дублировать
+	// и замениь условия на них
+	std::vector<BYTE> b( a.size() );
+	std::vector<BYTE> c( a.size() );
+	std::vector<BYTE> d( a.size() );
+	int s = 2 * filterSize + 1;
+	for( int center = filterSize; center < a.size(); center += s - 1 ) {
+		d[0] = a[center];
+		for( int i = 1; i < s - 1; ++i ) {
+			if( center + i > a.size() - 1 ) {
+				d[i] = max( d[i - 1], 0 );
+				continue;
+			}
+			d[i] = max( d[i - 1], a[center + i] );
 		}
-	}
-	
-	raw.resize( w + 2 * filterSize );
-	for( size_t j = 0; j < filterSize; ++j ) {
-		if( j % filterSize == 0 ) {
-			// Начало блока длины 2R
-			raw[j] = image[j + filterSize];
-			raw[j + w] = image[w - filterSize + j];
-		} else {
-			raw[j] = max( raw[j - 1], image[j + filterSize] );
-			raw[j + w] = max( raw[j + w - 1], image[w - filterSize + j] );
+
+		c[s - 2] = a[center - 1];
+		for( int i = 1; i < s - 1; ++i ) {
+			if( center - 1 - i < 0 ) {
+				c[s - 2 - i] = max( c[s - 1 - i], 0 );
+				continue;
+			}
+			c[s - 2 - i] = max( c[s - 1 - i], a[center - 1 - i] );
 		}
-	}
-	// Дополняем общую часть
-	for( size_t j = 0; j < image.size(); ++j ) {
-		if( j %filterSize == 0 ) {
-			raw[filterSize + j] = image[j];
-		} else {
-			raw[filterSize + j] = max( raw[filterSize + j - 1], image[j] );
+
+		for( int i = 0; i < s - 1; ++i ) {
+			if( center - filterSize + i > a.size() - 1 ) {
+				continue;
+			}
+			b[center - filterSize + i] = max( c[i], d[i] );
 		}
 	}
 
-	if( !straightDirection ) {
-		for( size_t i = 0; i < w / 2; ++i ) {
-			std::swap( image[i], image[w - i - 1] );
-		}
-	}
+	return b;
 }
 
-void processing( std::vector< std::vector<BYTE> >& image, const size_t filterSize )
+
+TImage processing( const TImage& image, const size_t filterSize )
 {
 	const size_t h = image.size();
 	const size_t w = image[0].size();
+	TImage out( h );
 	for( size_t i = 0; i < h; ++i ) {
-		// Дополняем буффер справа и слева, одновременно считая максимум
-		std::vector<BYTE> raw1;
-		buildRaw( raw1, image[i], filterSize, true );
-		std::vector<BYTE> raw2;
-		buildRaw( raw2, image[i], filterSize, false );
-		
-		// todo: make new array
+		out[i] = calculateHGW( image[i], filterSize );
 	}
+	return out;
 }
-
 
 void MorphOp( BitmapData& data, const size_t filterSize )
 {
@@ -75,8 +74,10 @@ void MorphOp( BitmapData& data, const size_t filterSize )
 	}
 
 	// 1 проход
-	processing( image, filterSize );
+	TImage result = processing( image, filterSize );
 
+
+	// todo: save result
 	/*// Транспонирование
 	std::vector < std::vector<BYTE> > imageTr;
 	imageTr.resize( w );
@@ -91,4 +92,16 @@ void MorphOp( BitmapData& data, const size_t filterSize )
 
 	// 2 проход
 	processing( imageTr, filterSize );*/
+
+	baseAdr = 0;
+	for( size_t y = 0; y < h; y++ ) {
+		int pixelAdr = baseAdr;
+		for( size_t x = 0; x < w; x++ ) {
+			pBuffer[pixelAdr] = result[y][x];
+			pBuffer[pixelAdr + 1] = result[y][x];
+			pBuffer[pixelAdr + 2] = result[y][x];
+			pixelAdr += bpp;
+		}
+		baseAdr += bpr;
+	}
 }
