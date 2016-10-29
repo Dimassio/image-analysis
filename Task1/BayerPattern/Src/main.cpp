@@ -97,9 +97,9 @@ int wmain( int argc, wchar_t* argv[] )
 		Bitmap GDIBitmapOriginal( original );
 		int w = GDIBitmapSource.GetWidth();
 		int h = GDIBitmapSource.GetHeight();
-		
+
 		assert( w == GDIBitmapOriginal.GetWidth() && h == GDIBitmapOriginal.GetHeight() );
-		
+
 		BitmapData bmpDataSource;
 		BitmapData bmpDataOriginal;
 		// Whole image
@@ -124,7 +124,7 @@ int wmain( int argc, wchar_t* argv[] )
 		image.Process();
 		wcout << L"Processing done" << endl;
 		image.GetData( bmpDataSource );
-		
+
 		// —читаем качество
 		wcout << L"Calculating PSNR..." << endl;
 		double PSNR = getPeakSignalToNoizeRatio( bmpDataSource, bmpDataOriginal );

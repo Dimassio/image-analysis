@@ -18,8 +18,7 @@ public:
 	void GetData( BitmapData& bmpData ) const;
 
 private:
-	// »зображение размера (height + 4) X (width + 4)
-	// так как не хочу думать что будет с крайними пиксел€ми.
+	// »зображение размера (height + 4) X (width + 4).
 	// —о всех сторон на 2 строки пиксели просто дублируютс€.
 	TImage image;
 	size_t height;
