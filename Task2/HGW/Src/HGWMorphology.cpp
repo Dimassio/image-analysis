@@ -5,40 +5,40 @@ std::vector<BYTE> calculateHGW( const std::vector<BYTE>& a, const size_t filterS
 {
 	// todo: дополнить справа и слева 0ми или просто дублировать
 	// и замениь условия на них
+	const int s = 2 * filterSize + 1;
+
 	std::vector<BYTE> b( a.size() );
-	std::vector<BYTE> c( a.size() );
-	std::vector<BYTE> d( a.size() );
-	int s = 2 * filterSize + 1;
-	for( int center = filterSize; center < a.size(); center += s - 1 ) {
+	for( int center = filterSize; center < a.size(); center += ( s - 1 ) ) {
+		std::vector<BYTE> c( s - 1 );
+		std::vector<BYTE> d( s - 1 );
+
 		d[0] = a[center];
 		for( int i = 1; i < s - 1; ++i ) {
 			if( center + i > a.size() - 1 ) {
 				d[i] = max( d[i - 1], 0 );
-				continue;
+			} else {
+				d[i] = max( d[i - 1], a[center + i] );
 			}
-			d[i] = max( d[i - 1], a[center + i] );
 		}
 
 		c[s - 2] = a[center - 1];
 		for( int i = 1; i < s - 1; ++i ) {
-			if( center - 1 - i < 0 ) {
+			if( ( center - 1 - i ) < 0 ) {
 				c[s - 2 - i] = max( c[s - 1 - i], 0 );
-				continue;
+			} else {
+				c[s - 2 - i] = max( c[s - 1 - i], a[center - 1 - i] );
 			}
-			c[s - 2 - i] = max( c[s - 1 - i], a[center - 1 - i] );
 		}
 
 		for( int i = 0; i < s - 1; ++i ) {
-			if( center - filterSize + i > a.size() - 1 ) {
-				continue;
+			if( ( center - filterSize + i ) < a.size() ) {
+				b[center - filterSize + i] = max( c[i], d[i] );
 			}
-			b[center - filterSize + i] = max( c[i], d[i] );
 		}
 	}
 
 	return b;
 }
-
 
 TImage processing( const TImage& image, const size_t filterSize )
 {
@@ -76,10 +76,9 @@ void MorphOp( BitmapData& data, const size_t filterSize )
 	// 1 проход
 	TImage result = processing( image, filterSize );
 
-
-	// todo: save result
-	/*// Транспонирование
-	std::vector < std::vector<BYTE> > imageTr;
+	// 2 проход
+	// Транспонирование
+	/*std::vector < std::vector<BYTE> > imageTr;
 	imageTr.resize( w );
 	for( size_t i = 0; i < w; ++i ) {
 		imageTr[i].resize( h );
@@ -90,16 +89,34 @@ void MorphOp( BitmapData& data, const size_t filterSize )
 		}
 	}
 
-	// 2 проход
-	processing( imageTr, filterSize );*/
 
+	TImage resT = processing( imageTr, filterSize );
+
+	TImage final;
+	final.resize( h );
+	for( size_t i = 0; i < h; ++i ) {
+		final[i].resize( w );
+	}
+	for( size_t i = 0; i < w; ++i ) {
+		for( size_t j = 0; j < h; ++j ) {
+			final[j][i] = resT[i][j];
+		}
+	}
+	
+	for( size_t i = 0; i < h; ++i ) {
+		for( size_t j = 0; j < w; ++j ) {
+			final[i][j] = min( final[i][j], result[i][j] );
+		}
+	}*/
+
+	TImage final = result;
 	baseAdr = 0;
 	for( size_t y = 0; y < h; y++ ) {
 		int pixelAdr = baseAdr;
 		for( size_t x = 0; x < w; x++ ) {
-			pBuffer[pixelAdr] = result[y][x];
-			pBuffer[pixelAdr + 1] = result[y][x];
-			pBuffer[pixelAdr + 2] = result[y][x];
+			pBuffer[pixelAdr] = final[y][x];
+			pBuffer[pixelAdr + 1] = final[y][x];
+			pBuffer[pixelAdr + 2] = final[y][x];
 			pixelAdr += bpp;
 		}
 		baseAdr += bpr;

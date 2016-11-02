@@ -58,7 +58,7 @@ int wmain( int argc, wchar_t* argv[] )
 			wcout << L"Source file:" << argv[1] << endl;
 		}
 
-		size_t filterSize = 5;
+		size_t filterSize = 3;
 		//wcin >> filterSize;
 		// Processing
 		MorphOp( bmpDataSource, filterSize );
