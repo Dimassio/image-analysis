@@ -1,36 +1,42 @@
+п»ї#include <Common.h>
 #include <HGWMorphology.h>
 #include <cstdlib>
 
 std::vector<BYTE> calculateHGW( const std::vector<BYTE>& a, const size_t filterSize )
 {
-	// todo: дополнить справа и слева 0ми или просто дублировать
-	// и замениь условия на них
-	const int s = 2 * filterSize + 1;
-
+	const size_t s = 2 * filterSize + 1;
 	std::vector<BYTE> b( a.size() );
-	for( int center = filterSize; center < a.size(); center += ( s - 1 ) ) {
-		std::vector<BYTE> c( s - 1 );
-		std::vector<BYTE> d( s - 1 );
-
-		d[0] = a[center];
-		for( int i = 1; i < s - 1; ++i ) {
-			if( center + i > a.size() - 1 ) {
+	std::vector<BYTE> c( s - 1 );
+	std::vector<BYTE> d( s - 1 );
+	// + filter - РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕР№ РѕР±СЂР°Р±РѕС‚РєРё РЅР° РєСЂР°СЏС…
+	for( size_t center = filterSize; center < a.size() + filterSize; center += ( s - 1 ) ) {
+		if( center >= a.size() ) {
+			d[0] = 0;
+		} else {
+			d[0] = a[center];
+		}
+		for( size_t i = 1; i < s - 1; ++i ) {
+			if( center + i >= a.size() ) {
 				d[i] = max( d[i - 1], 0 );
 			} else {
 				d[i] = max( d[i - 1], a[center + i] );
 			}
 		}
 
-		c[s - 2] = a[center - 1];
-		for( int i = 1; i < s - 1; ++i ) {
-			if( ( center - 1 - i ) < 0 ) {
+		if( center - 1 >= a.size() ) {
+			c[s - 2] = 0;
+		} else {
+			c[s - 2] = a[center - 1];
+		}
+		for( size_t i = 1; i < s - 1; ++i ) {
+			if( ( int ) (center - 1 - i ) < 0 || ( center - 1 - i ) >= a.size() ) {
 				c[s - 2 - i] = max( c[s - 1 - i], 0 );
 			} else {
 				c[s - 2 - i] = max( c[s - 1 - i], a[center - 1 - i] );
 			}
 		}
 
-		for( int i = 0; i < s - 1; ++i ) {
+		for( size_t i = 0; i < s - 1; ++i ) {
 			if( ( center - filterSize + i ) < a.size() ) {
 				b[center - filterSize + i] = max( c[i], d[i] );
 			}
@@ -40,7 +46,7 @@ std::vector<BYTE> calculateHGW( const std::vector<BYTE>& a, const size_t filterS
 	return b;
 }
 
-TImage processing( const TImage& image, const size_t filterSize )
+TImage Processing( const TImage& image, const size_t filterSize )
 {
 	const size_t h = image.size();
 	const size_t w = image[0].size();
@@ -51,17 +57,15 @@ TImage processing( const TImage& image, const size_t filterSize )
 	return out;
 }
 
-void MorphOp( BitmapData& data, const size_t filterSize )
+TImage GetImage( const BitmapData& data )
 {
-	std::vector< std::vector<BYTE> > image;
+	TImage image;
 	const int bpr = data.Stride;
 	const int bpp = 3; // BGR24
 	BYTE* pBuffer = ( BYTE* ) data.Scan0;
 	const size_t w = data.Width;
 	const size_t h = data.Height;
 	image.resize( h );
-
-	// Сама картинка
 	int baseAdr = 0;
 	for( size_t y = 0; y < h; y++ ) {
 		image[y].resize( w );
@@ -73,52 +77,53 @@ void MorphOp( BitmapData& data, const size_t filterSize )
 		baseAdr += bpr;
 	}
 
-	// 1 проход
-	TImage result = processing( image, filterSize );
+	return image;
+}
 
-	// 2 проход
-	// Транспонирование
-	/*std::vector < std::vector<BYTE> > imageTr;
-	imageTr.resize( w );
-	for( size_t i = 0; i < w; ++i ) {
-		imageTr[i].resize( h );
-	}
-	for( size_t i = 0; i < h; ++i ) {
-		for( size_t j = 0; j < w; ++j ) {
-			imageTr[j][i] = image[i][j];
-		}
-	}
-
-
-	TImage resT = processing( imageTr, filterSize );
-
-	TImage final;
-	final.resize( h );
-	for( size_t i = 0; i < h; ++i ) {
-		final[i].resize( w );
-	}
-	for( size_t i = 0; i < w; ++i ) {
-		for( size_t j = 0; j < h; ++j ) {
-			final[j][i] = resT[i][j];
-		}
-	}
-	
-	for( size_t i = 0; i < h; ++i ) {
-		for( size_t j = 0; j < w; ++j ) {
-			final[i][j] = min( final[i][j], result[i][j] );
-		}
-	}*/
-
-	TImage final = result;
-	baseAdr = 0;
+// Р”Р»СЏ С‚СЂР°РЅСЃРїРѕРЅРёСЂРѕРІР°РЅРЅРѕРіРѕ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
+void SetImageForTr( BitmapData& data, const TImage& image )
+{
+	const int bpr = data.Stride;
+	const int bpp = 3; // BGR24
+	BYTE* pBuffer = ( BYTE* ) data.Scan0;
+	const size_t w = data.Width;
+	const size_t h = data.Height;
+	int baseAdr = 0;
 	for( size_t y = 0; y < h; y++ ) {
 		int pixelAdr = baseAdr;
 		for( size_t x = 0; x < w; x++ ) {
-			pBuffer[pixelAdr] = final[y][x];
-			pBuffer[pixelAdr + 1] = final[y][x];
-			pBuffer[pixelAdr + 2] = final[y][x];
+			// РѕР±СЂР°С‰Р°РµРјСЃСЏ РїРѕ [С…] [Сѓ] РїРѕС‚РѕРјСѓ С‡С‚Рѕ 
+			// РЅР° РІС…РѕРґ РїРѕРґР°РµС‚СЃСЏ С‚СЂР°РЅСЃРїРѕРЅРёСЂРѕРІР°РЅРЅРѕРµ РёР·РѕР±СЂР°Р¶РµРЅРёРµ
+			pBuffer[pixelAdr] = image[x][y];
+			pBuffer[pixelAdr + 1] = image[x][y];
+			pBuffer[pixelAdr + 2] = image[x][y];
 			pixelAdr += bpp;
 		}
 		baseAdr += bpr;
 	}
+}
+
+void MorphOp( BitmapData& data, const size_t filterSize )
+{
+	const size_t w = data.Width;
+	const size_t h = data.Height;
+	wcout << "Getting image.." << endl;
+	TImage image = GetImage( data );
+	// 1 РїСЂРѕС…РѕРґ РїРѕ РІРµСЂС‚РёРєР°Р»Рё
+	wcout << "First trace..." << endl;
+	TImage result = Processing( image, filterSize );
+	wcout << "Transposition..." << endl;
+	// РўСЂР°РЅСЃРїРѕРЅРёСЂСѓРµРј
+	TImage imageTr;
+	imageTr.resize( w );
+	for( size_t i = 0; i < w; ++i ) {
+		for( size_t j = 0; j < h; ++j ) {
+			imageTr[i].push_back( result[j][i] );
+		}
+	}
+	wcout << "Second trace..." << endl;
+	// 2 РїСЂРѕС…РѕРґ РїРѕ РіРѕСЂРёР·РѕРЅС‚Р°Р»Рё
+	TImage resTr = Processing( imageTr, filterSize );
+	wcout << "Setting image..." << endl;
+	SetImageForTr( data, resTr );
 }
