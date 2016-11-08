@@ -1,4 +1,4 @@
-#include <Common.h>
+п»ї#include <Common.h>
 #include <HGWMorphology.h>
 #include <cstdlib>
 
@@ -8,7 +8,7 @@ std::vector<BYTE> calculateHGW( const std::vector<BYTE>& a, const size_t filterS
 	std::vector<BYTE> b( a.size() );
 	std::vector<BYTE> c( s - 1 );
 	std::vector<BYTE> d( s - 1 );
-	// + filter - для корректной обработки на краях
+	// + filter - РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕР№ РѕР±СЂР°Р±РѕС‚РєРё РЅР° РєСЂР°СЏС…
 	for( size_t center = filterSize; center < a.size() + filterSize; center += ( s - 1 ) ) {
 		if( center >= a.size() ) {
 			d[0] = 0;
@@ -80,7 +80,7 @@ TImage GetImage( const BitmapData& data )
 	return image;
 }
 
-// Для транспонированного изображения
+// Р”Р»СЏ С‚СЂР°РЅСЃРїРѕРЅРёСЂРѕРІР°РЅРЅРѕРіРѕ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
 void SetImageForTr( BitmapData& data, const TImage& image )
 {
 	const int bpr = data.Stride;
@@ -92,8 +92,8 @@ void SetImageForTr( BitmapData& data, const TImage& image )
 	for( size_t y = 0; y < h; y++ ) {
 		int pixelAdr = baseAdr;
 		for( size_t x = 0; x < w; x++ ) {
-			// обращаемся по [х] [у] потому что 
-			// на вход подается транспонированное изображение
+			// РѕР±СЂР°С‰Р°РµРјСЃСЏ РїРѕ [С…] [Сѓ] РїРѕС‚РѕРјСѓ С‡С‚Рѕ 
+			// РЅР° РІС…РѕРґ РїРѕРґР°РµС‚СЃСЏ С‚СЂР°РЅСЃРїРѕРЅРёСЂРѕРІР°РЅРЅРѕРµ РёР·РѕР±СЂР°Р¶РµРЅРёРµ
 			pBuffer[pixelAdr] = image[x][y];
 			pBuffer[pixelAdr + 1] = image[x][y];
 			pBuffer[pixelAdr + 2] = image[x][y];
@@ -109,11 +109,11 @@ void MorphOp( BitmapData& data, const size_t filterSize )
 	const size_t h = data.Height;
 	wcout << "Getting image.." << endl;
 	TImage image = GetImage( data );
-	// 1 проход по вертикали
+	// 1 РїСЂРѕС…РѕРґ РїРѕ РІРµСЂС‚РёРєР°Р»Рё
 	wcout << "First trace..." << endl;
 	TImage result = Processing( image, filterSize );
 	wcout << "Transposition..." << endl;
-	// Транспонируем
+	// РўСЂР°РЅСЃРїРѕРЅРёСЂСѓРµРј
 	TImage imageTr;
 	imageTr.resize( w );
 	for( size_t i = 0; i < w; ++i ) {
@@ -122,7 +122,7 @@ void MorphOp( BitmapData& data, const size_t filterSize )
 		}
 	}
 	wcout << "Second trace..." << endl;
-	// 2 проход по горизонтали
+	// 2 РїСЂРѕС…РѕРґ РїРѕ РіРѕСЂРёР·РѕРЅС‚Р°Р»Рё
 	TImage resTr = Processing( imageTr, filterSize );
 	wcout << "Setting image..." << endl;
 	SetImageForTr( data, resTr );

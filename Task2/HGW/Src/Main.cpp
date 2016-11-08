@@ -1,4 +1,4 @@
-#include <Common.h>
+﻿#include <Common.h>
 #include <HGWMorphology.h>
 
 int GetEncoderClsid( const wchar_t* format, CLSID* pClsid )
