@@ -20,10 +20,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h" />
-    <ClInclude Include="Inc\HGWMorphology.h" />
+    <ClInclude Include="Inc\Image.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Src\HGWMorphology.cpp" />
+    <ClCompile Include="Src\Image.cpp" />
     <ClCompile Include="Src\Main.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
