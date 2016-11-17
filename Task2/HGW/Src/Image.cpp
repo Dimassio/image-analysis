@@ -66,11 +66,11 @@ void CImage::GetData( BitmapData& bmpData ) const
 {
 }
 
-void CImage::hgwProcessing( const TImage& image, const size_t filterSize, TImage& result ) const
+void CImage::hgwProcessing( const TImage& _image, const size_t filterSize, TImage& result ) const
 {
-	result.resize( image.size() );
+	result.resize( _image.size() );
 	for( size_t i = 0; i < result.size(); ++i ) {
-		oneDimensionalHGW( image[i], filterSize, result[i] );
+		oneDimensionalHGW( _image[i], filterSize, result[i] );
 	}
 }
 
@@ -94,7 +94,7 @@ void CImage::oneDimensionalHGW( const std::vector<BYTE>& a, const size_t radius,
 			}
 		}
 
-		if( center >= a.size() ) {
+		if( center - 1 >= a.size() ) {
 			c[size - 2] = 0;
 		} else {
 			c[size - 2] = a[center - 1];
@@ -125,9 +125,7 @@ BYTE CImage::getMaxValue( int i, int j, int rad ) const
 	int maximum = 0;
 	for( int ii = top; ii < bottom; ++ii ) {
 		for( int jj = left; jj < right; ++jj ) {
-			if( image[ii][jj] > maximum ) {
-				maximum = image[ii][jj];
-			}
+			maximum = max( maximum, image[ii][jj] );
 		}
 	}
 	return maximum;

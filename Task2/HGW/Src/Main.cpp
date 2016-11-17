@@ -2,6 +2,8 @@
 #pragma hdrstop
 
 #include <Image.h>
+#include <ctime>
+#include <fstream>
 
 int GetEncoderClsid( const wchar_t* format, CLSID* pClsid )
 {
@@ -70,25 +72,19 @@ int wmain( int argc, wchar_t* argv[] )
 			wcout << L"Source file:" << source << endl;
 		}
 
-			
-		size_t filterRadius;
-		wcin >> filterRadius;
+		/*size_t filterRadius;
+		wcin >> filterRadius;*/
+
 		
-		wcout << L"HGW started" << endl;
 		CImage img( bmpDataSource );
-		TImage hgw;
-		img.HGWDilate( hgw, filterRadius );
-
-		wcout << L"Now usual!" << endl;
-
-		TImage usual;
-		img.EasyDilate( usual, filterRadius );
+		for( size_t filterRadius = 1; filterRadius < 102; filterRadius += 10 ) {
+			TImage hgw;
+			size_t start = clock();
+			img.HGWDilate( hgw, filterRadius );
+			size_t finish = clock();
+			// todo: write in file via fstream
+		}
 		
-		wcout << L"Now comparing  . . ." << endl;
-		CompareImages( hgw, usual );
-
-		wcout << L"FITS!! YEAH" << endl;
-
 		GDIBitmapSource.UnlockBits( &bmpDataSource );
 	}
 
