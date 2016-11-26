@@ -2,8 +2,6 @@
 #pragma hdrstop
 
 #include <Image.h>
-#include <ctime>
-#include <fstream>
 
 int GetEncoderClsid( const wchar_t* format, CLSID* pClsid )
 {
@@ -34,25 +32,59 @@ int GetEncoderClsid( const wchar_t* format, CLSID* pClsid )
 	return -1;  // Failure
 }
 
+void GetData( const TImage& image, BitmapData& bmpData )
+{
+	const int bpr = bmpData.Stride;
+	const int bpp = 3; // BGR24
+	size_t width = bmpData.Width;
+	size_t height = bmpData.Height;
+	BYTE* pBuffer = ( BYTE* ) bmpData.Scan0;
+	int baseAdr = 0;
+	for( size_t y = 0; y < height; y++ ) {
+		int pixelAdr = baseAdr;
+		for( size_t x = 0; x < width; x++ ) {
+			pBuffer[pixelAdr] = image[y][x];
+			pBuffer[pixelAdr + 1] = image[y][x];
+			pBuffer[pixelAdr + 2] = image[y][x];
+			pixelAdr += bpp;
+		}
+		baseAdr += bpr;
+	}
+
+}
+
 void CompareImages( const TImage& first, const TImage& second )
 {
+	bool done = false;
+	bool succeeded = true;
 	for( size_t y = 0; y < first.size(); y++ ) {
 		for( size_t x = 0; x < first[y].size(); x++ ) {
 			if( first[y][x] != second[y][x] ) {
-				DebugBreak();
+				wcout << "Not equal" << endl;
+				wcout << y << " " << x << endl;
+				done = true;
+				succeeded = false;
+				break;
 			}
 		}
+		if( done ) {
+			break;
+		}
+	}
+	if( succeeded ) {
+		wcout << "Equal!" << endl;
 	}
 }
 
 int wmain( int argc, wchar_t* argv[] )
 {
-	if( argc != 2 ) {
-		wcout << L"Usage: <inputFile>" << endl;
+	if( argc != 3 ) {
+		wcout << L"Usage: <inputFile> <outputFile>" << endl;
 		return 1;
 	}
 
 	wchar_t* source = argv[1];
+	wchar_t* destination = argv[2];
 
 	GdiplusStartupInput gdiplusStartupInput;
 	ULONG_PTR gdiplusToken;
@@ -72,20 +104,19 @@ int wmain( int argc, wchar_t* argv[] )
 			wcout << L"Source file:" << source << endl;
 		}
 
-		/*size_t filterRadius;
-		wcin >> filterRadius;*/
-
-		
+		size_t filterRadius;
+		wcin >> filterRadius;
 		CImage img( bmpDataSource );
-		for( size_t filterRadius = 1; filterRadius < 102; filterRadius += 10 ) {
-			TImage hgw;
-			size_t start = clock();
-			img.HGWDilate( hgw, filterRadius );
-			size_t finish = clock();
-			// todo: write in file via fstream
-		}
-		
+		TImage dilatedImage;
+		img.HGWDilate( dilatedImage, filterRadius );
+		GetData( dilatedImage, bmpDataSource );
+
 		GDIBitmapSource.UnlockBits( &bmpDataSource );
+
+		// Save result
+		CLSID clsId;
+		GetEncoderClsid( L"image/bmp", &clsId );
+		GDIBitmapSource.Save( destination, &clsId, 0 );
 	}
 
 	GdiplusShutdown( gdiplusToken );
