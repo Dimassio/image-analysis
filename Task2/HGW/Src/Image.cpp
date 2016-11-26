@@ -1,4 +1,4 @@
-#include <Common.h>
+п»ї#include <Common.h>
 #pragma hdrstop
 
 #include <Image.h>
@@ -36,12 +36,12 @@ void CImage::EasyDilate( TImage& dilated, const size_t radius ) const
 
 void CImage::HGWDilate( TImage& result, const size_t radius ) const
 {
-	// 1 проход по вертикали
+	// 1 РїСЂРѕС…РѕРґ РїРѕ РІРµСЂС‚РёРєР°Р»Рё
 	wcout << "First trace..." << endl;
 	TImage dilatedFirstTime;
 	hgwProcessing( image, radius, dilatedFirstTime );
 	wcout << "Transposition..." << endl;
-	// Транспонируем
+	// РўСЂР°РЅСЃРїРѕРЅРёСЂСѓРµРј
 	TImage imageTr;
 	imageTr.resize( width );
 	for( size_t i = 0; i < width; ++i ) {
@@ -49,11 +49,11 @@ void CImage::HGWDilate( TImage& result, const size_t radius ) const
 			imageTr[i].push_back( dilatedFirstTime[j][i] );
 		}
 	}
-	// 2 проход по горизонтали
+	// 2 РїСЂРѕС…РѕРґ РїРѕ РіРѕСЂРёР·РѕРЅС‚Р°Р»Рё
 	wcout << "Second trace..." << endl;
 	TImage dilatedSecondTime;
 	hgwProcessing( imageTr, radius, dilatedSecondTime );
-	// Обратно транспонируем
+	// РћР±СЂР°С‚РЅРѕ С‚СЂР°РЅСЃРїРѕРЅРёСЂСѓРµРј
 	result.resize( height );
 	for( size_t i = 0; i < height; ++i ) {
 		for( size_t j = 0; j < width; ++j ) {

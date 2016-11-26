@@ -1,4 +1,4 @@
-#pragma once
+п»ї#pragma once
 
 #include <vector>
 
@@ -8,8 +8,8 @@ class CImage {
 public:
 	explicit CImage( const BitmapData& bmpData );
 
-	// Не перезаписываем исходное изображение, 
-	// чтобы можно было несколько раз экспериментировать
+	// РќРµ РїРµСЂРµР·Р°РїРёСЃС‹РІР°РµРј РёСЃС…РѕРґРЅРѕРµ РёР·РѕР±СЂР°Р¶РµРЅРёРµ, 
+	// С‡С‚РѕР±С‹ РјРѕР¶РЅРѕ Р±С‹Р»Рѕ РЅРµСЃРєРѕР»СЊРєРѕ СЂР°Р· СЌРєСЃРїРµСЂРёРјРµРЅС‚РёСЂРѕРІР°С‚СЊ
 	void EasyDilate( TImage& result, const size_t radius ) const;
 	void HGWDilate( TImage& result, const size_t radius ) const;
 
