@@ -106,9 +106,9 @@ int wmain( int argc, wchar_t* argv[] )
 
 		size_t filterRadius;
 		wcin >> filterRadius;
-		CImage img( bmpDataSource );
+		CImage img( bmpDataSource, MO_Dilate );
 		TImage dilatedImage;
-		img.HGWDilate( dilatedImage, filterRadius );
+		img.HGWMorph( dilatedImage, filterRadius );
 		GetData( dilatedImage, bmpDataSource );
 
 		GDIBitmapSource.UnlockBits( &bmpDataSource );
