@@ -60,17 +60,15 @@ int wmain( int argc, wchar_t* argv[] )
 			wcout << L"Source file:" << source << endl;
 		}
 
-		size_t windowSize;
-		wcin >> windowSize;
 		CImage img( bmpDataSource );
-		img.NICKBinarization( windowSize );
+		img.NICKBinarization();
 		img.GetData( bmpDataSource );
 
 		GDIBitmapSource.UnlockBits( &bmpDataSource );
 
 		// Save result
 		CLSID clsId;
-		GetEncoderClsid( L"image/bmp", &clsId );
+		GetEncoderClsid( L"image/jpeg", &clsId );
 		GDIBitmapSource.Save( destination, &clsId, 0 );
 	}
 
