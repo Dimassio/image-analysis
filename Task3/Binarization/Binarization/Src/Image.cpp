@@ -16,10 +16,8 @@ CImage::CImage( const BitmapData& bmpData )
 	height = bmpData.Height;
 
 	binarizedImage.resize( height );
-	//A.resize( height );
 	for( size_t y = 0; y < binarizedImage.size(); ++y ) {
 		binarizedImage[y].resize( width );
-		//A[y].resize( width );
 	}
 
 	image.resize( height + 2 * zeroLevel );
@@ -88,7 +86,7 @@ BYTE CImage::getWindowthreshold( int _i, int _j ) const
 	int bottom = min( height - 1, _i + Radius ) + 1;
 
 	// k try from -0.2 to -0.1.
-	double k = -0.1;
+	double k = -0.2;
 	int sumOfSqrPixels = 0;
 	int sumOfPixels = 0;
 	int numberOfPixels = ( 2 * Radius + 1 ) * ( 2 * Radius + 1 );
