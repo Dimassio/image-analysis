@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include <vector>
+#include <deque>
 
 typedef std::vector< std::vector< BYTE > > TImage;
 
@@ -19,8 +20,11 @@ private:
 	size_t height;
 	size_t width;
 	size_t zeroLevel;
+	size_t filterSize;
 
 	void fillUpperAndLowerEdges();
 	void fillLeftRightEdges();
-	BYTE getWindowthreshold( int i, int j ) const;
+	void binarizePixel( size_t i, size_t j, BYTE threshold );
+	void initializeTempBuffers( std::vector<int>& sumOfPixels, std::deque< std::vector<int> >& tempSum,
+								  std::vector<int>& sumOfSqrPixels, std::deque< std::vector<int> >& tempSqrSum ) const;
 };

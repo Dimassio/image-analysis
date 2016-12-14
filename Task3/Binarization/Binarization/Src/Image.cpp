@@ -4,11 +4,13 @@
 #include <Image.h>
 
 // Окна 19 на 19
+// todo: is it good to place it here?
 const int Radius = 9;
 
 CImage::CImage( const BitmapData& bmpData )
 {
-	zeroLevel = 9;
+	zeroLevel = Radius;
+	filterSize = 2 * Radius + 1;
 	const int bpr = bmpData.Stride;
 	const int bpp = 3; // BGR24
 	BYTE* pBuffer = ( BYTE* ) bmpData.Scan0;
@@ -64,41 +66,110 @@ void CImage::GetData( BitmapData& bmpData ) const
 
 void CImage::NICKBinarization()
 {
-	for( size_t i = zeroLevel; i < zeroLevel + height; ++i ) {
-		wcout << i << endl;
+	// k try from -0.2 to -0.1.
+	double k = -0.1;
+	int numberOfPixels = filterSize * filterSize;
 
-		for( size_t j = zeroLevel; j < zeroLevel + width; ++j ) {
-			BYTE t = getWindowthreshold( i, j );
-			if( image[i][j] > t ) {
-				binarizedImage[i - zeroLevel][j - zeroLevel] = 255;
-			} else {
-				binarizedImage[i - zeroLevel][j - zeroLevel] = 0;
+	std::vector<int> sumOfPixels;
+	std::vector<int> sumOfSqrPixels;
+	std::deque< std::vector<int> > tempSum;
+	std::deque< std::vector<int> > tempSqrSum;
+	initializeTempBuffers( sumOfPixels, tempSum, sumOfSqrPixels, tempSqrSum );
+
+	for( size_t i = zeroLevel; i < zeroLevel + height; ++i ) {
+		if( i == zeroLevel ) {
+			// Первая строка уже предподсчитана
+			for( size_t j = zeroLevel; j < zeroLevel + width; ++j ) {
+				double mean = sumOfPixels[j - zeroLevel] / numberOfPixels;
+				BYTE threshold = mean + k * sqrt( ( sumOfSqrPixels[j - zeroLevel] - mean * mean ) / numberOfPixels );
+				binarizePixel( i, j, threshold );
 			}
+			continue;
+		}
+		std::vector<int> newLine( width );
+		std::vector<int> newSqrLine( width );
+		// 1ую ячейку заполняем
+		int sum = 0;
+		int sqrSum = 0;
+		for( size_t j = 0; j < filterSize; ++j ) {
+			sum += image[i + 1][j];
+			sqrSum += image[i + 1][j] * image[i + 1][j];
+		}
+		newLine[0] = sum;
+		newSqrLine[0] = sqrSum;
+		sumOfPixels[0] = sumOfPixels[0] - tempSum[0][0] + newLine[0];
+		sumOfSqrPixels[0] = sumOfSqrPixels[0] - tempSqrSum[0][0] + newSqrLine[0];
+		for( size_t j = zeroLevel + 1; j < zeroLevel + width; ++j ) {
+			sum = sum - image[i + 1][j - zeroLevel - 1] + image[i + 1][j + zeroLevel];
+			sqrSum = sqrSum - image[i + 1][j - zeroLevel - 1] * image[i + 1][j - zeroLevel - 1] +
+				image[i + 1][j + zeroLevel] * image[i + 1][j + zeroLevel];
+			newLine[j - zeroLevel] = sum;
+			newSqrLine[j - zeroLevel] = sqrSum;
+			sumOfPixels[j - zeroLevel] = sumOfPixels[j - zeroLevel] - tempSum[0][j - zeroLevel] + newLine[j - zeroLevel];
+			sumOfSqrPixels[j - zeroLevel] = sumOfSqrPixels[j - zeroLevel] - tempSqrSum[0][j - zeroLevel] + newSqrLine[j - zeroLevel];
+
+			double mean = sumOfPixels[j - zeroLevel] / numberOfPixels;
+			BYTE threshold = mean + k * sqrt( ( sumOfSqrPixels[j - zeroLevel] - mean * mean ) / numberOfPixels );
+			binarizePixel( i, j, threshold );
+		}
+
+		tempSum.push_back( newLine );
+		tempSum.pop_front();
+		tempSqrSum.push_back( newSqrLine );
+		tempSqrSum.pop_front();
+
+		if( i % 100 == 0 ) {
+			wcout << i << endl;
 		}
 	}
 }
 
-BYTE CImage::getWindowthreshold( int _i, int _j ) const
+void CImage::initializeTempBuffers( std::vector<int>& sumOfPixels, std::deque< std::vector<int> >& tempSum,
+									std::vector<int>& sumOfSqrPixels, std::deque< std::vector<int> >& tempSqrSum ) const
 {
-	int left = max( _j - Radius, 0 );
-	int top = max( _i - Radius, 0 );
-	int right = min( width - 1, _j + Radius ) + 1;
-	int bottom = min( height - 1, _i + Radius ) + 1;
-
-	// k try from -0.2 to -0.1.
-	double k = -0.2;
-	int sumOfSqrPixels = 0;
-	int sumOfPixels = 0;
-	int numberOfPixels = ( 2 * Radius + 1 ) * ( 2 * Radius + 1 );
-	for( int i = top; i < bottom; ++i ) {
-		for( int j = left; j < right; ++j ) {
-			sumOfPixels += image[i][j];
-			sumOfSqrPixels += image[i][j] * image[i][j];
+	sumOfPixels.resize( width, 0 );
+	sumOfSqrPixels.resize( width, 0 );
+	tempSum.resize( filterSize );
+	tempSqrSum.resize( filterSize );
+	for( size_t i = 0; i < filterSize; ++i ) {
+		tempSum[i].resize( width );
+		tempSqrSum[i].resize( width );
+	}
+	// Середина temp - это первая строка изображения
+	// в sumOfPixels уже будут необходимые суммы по первой строке изображения
+	for( size_t i = 0; i < filterSize; ++i ) {
+		// 1ую просто заполняем
+		int sum = 0;
+		int sqrSum = 0;
+		for( size_t j = 0; j < filterSize; ++j ) {
+			sum += image[i][j];
+			sqrSum += image[i][j] * image[i][j];
+		}
+		tempSum[i][0] = sum;
+		tempSqrSum[i][0] = sqrSum;
+		sumOfPixels[0] += sum;
+		sumOfSqrPixels[0] += sqrSum;
+		// А дальше идем скользящим окном
+		for( size_t j = zeroLevel + 1; j < zeroLevel + width; ++j ) {
+			sum = sum - image[i][j - zeroLevel - 1] + image[i][j + zeroLevel];
+			sqrSum = sqrSum - image[i][j - zeroLevel - 1] * image[i][j - zeroLevel - 1] +
+				image[i][j + zeroLevel] * image[i][j + zeroLevel];
+			tempSum[i][j - zeroLevel] = sum;
+			tempSqrSum[i][j - zeroLevel] = sqrSum;
+			// Заполняем суммы по вертикали
+			sumOfPixels[j - zeroLevel] += sum;
+			sumOfSqrPixels[j - zeroLevel] += sqrSum;
 		}
 	}
-	BYTE mean = sumOfPixels / numberOfPixels;
-	BYTE result = mean + k * sqrt( ( sumOfSqrPixels - mean * mean ) / numberOfPixels );
-	return result;
+}
+
+void CImage::binarizePixel( size_t i, size_t j, BYTE threshold )
+{
+	if( image[i][j] > threshold ) {
+		binarizedImage[i - zeroLevel][j - zeroLevel] = 255;
+	} else {
+		binarizedImage[i - zeroLevel][j - zeroLevel] = 0;
+	}
 }
 
 void CImage::fillLeftRightEdges()
@@ -109,7 +180,7 @@ void CImage::fillLeftRightEdges()
 			image[i][j] = image[i][zeroLevel];
 		}
 		// right edge
-		for( size_t j = width + zeroLevel; j < image.size(); ++j ) {
+		for( size_t j = width + zeroLevel; j < image[i].size(); ++j ) {
 			image[i][j] = image[i][zeroLevel + width - 1];
 		}
 	}
