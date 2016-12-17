@@ -2,8 +2,7 @@
 #pragma hdrstop
 
 #include <Image.h>
-#include <fstream>
-#include <deque>
+#include <ctime>
 
 int GetEncoderClsid( const wchar_t* format, CLSID* pClsid )
 {
@@ -37,7 +36,7 @@ int GetEncoderClsid( const wchar_t* format, CLSID* pClsid )
 int wmain( int argc, wchar_t* argv[] )
 {
 	if( argc != 3 ) {
-		wcout << L"Usage: <inputFile> <outputFile>" << endl;
+		wcout << L"Usage: <inputFile> <outputFile>.jpg" << endl;
 		return 1;
 	}
 
@@ -63,7 +62,10 @@ int wmain( int argc, wchar_t* argv[] )
 		}
 
 		CImage img( bmpDataSource );
+		time_t start = clock();
 		img.NICKBinarization();
+		time_t finish = clock();
+		wcout << ( finish - start ) / 1000.0 << endl;
 		img.GetData( bmpDataSource );
 
 		GDIBitmapSource.UnlockBits( &bmpDataSource );

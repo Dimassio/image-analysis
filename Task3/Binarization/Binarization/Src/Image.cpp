@@ -3,10 +3,6 @@
 
 #include <Image.h>
 
-// Окна 19 на 19
-// todo: is it good to place it here?
-const int Radius = 9;
-
 CImage::CImage( const BitmapData& bmpData )
 {
 	zeroLevel = Radius;
@@ -66,8 +62,7 @@ void CImage::GetData( BitmapData& bmpData ) const
 
 void CImage::NICKBinarization()
 {
-	// k try from -0.2 to -0.1.
-	double k = -0.1;
+	const int D0 = 120;
 	int numberOfPixels = filterSize * filterSize;
 
 	std::vector<int> sumOfPixels;
@@ -81,8 +76,13 @@ void CImage::NICKBinarization()
 			// Первая строка уже предподсчитана
 			for( size_t j = zeroLevel; j < zeroLevel + width; ++j ) {
 				double mean = sumOfPixels[j - zeroLevel] / numberOfPixels;
+
+				double D = sumOfSqrPixels[j - zeroLevel] / numberOfPixels - ( mean ) * ( mean );
+				double k = D > D0 ? -0.1 : -0.2;
+
 				BYTE threshold = mean + k * sqrt( ( sumOfSqrPixels[j - zeroLevel] - mean * mean ) / numberOfPixels );
 				binarizePixel( i, j, threshold );
+
 			}
 			continue;
 		}
@@ -109,6 +109,9 @@ void CImage::NICKBinarization()
 			sumOfSqrPixels[j - zeroLevel] = sumOfSqrPixels[j - zeroLevel] - tempSqrSum[0][j - zeroLevel] + newSqrLine[j - zeroLevel];
 
 			double mean = sumOfPixels[j - zeroLevel] / numberOfPixels;
+
+			double D = sumOfSqrPixels[j - zeroLevel] / numberOfPixels - ( mean ) * ( mean );
+			double k = D > D0 ? -0.1 : -0.2;
 			BYTE threshold = mean + k * sqrt( ( sumOfSqrPixels[j - zeroLevel] - mean * mean ) / numberOfPixels );
 			binarizePixel( i, j, threshold );
 		}

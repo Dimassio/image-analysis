@@ -21,6 +21,8 @@ private:
 	size_t width;
 	size_t zeroLevel;
 	size_t filterSize;
+	// Окна 19 на 19
+	const size_t Radius = 9;
 
 	void fillUpperAndLowerEdges();
 	void fillLeftRightEdges();
