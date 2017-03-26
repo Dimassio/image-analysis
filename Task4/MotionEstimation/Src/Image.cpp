@@ -2,6 +2,18 @@
 #pragma hdrstop
 
 #include <Image.h>
+#include <Algorithm>
+
+bool comparator( const CVector& one, const CVector& two )
+{
+	if( one.x < two.x ) {
+		return true;
+	}
+	if( one.x == two.x ) {
+		return one.y < two.y;
+	}
+	return false;
+}
 
 CImage::CImage( const BitmapData& bmpData )
 {
@@ -56,18 +68,43 @@ void CImage::GetData( BitmapData& bmpData ) const
 	}
 }
 
+double length( const CVector& v )
+{
+	return sqrt( v.x * v.x + v.y * v.y );
+}
+
 CVector CImage::EstimateMotionVectorFrom( const CImage& other )
 {
+	std::vector<CVector> vectors;
+	size_t counter = 0;
+	int numberOfVectors = 0;
 	CVector averageVector( 0, 0 );
-	for( size_t i = 0; i < blocks.size(); ++i ) {
-		CVector currVector = getBlockVector( blocks[i], other.image );
-		averageVector += currVector;
+	double averageLen = 0.0;
+	for( int i = radius; i < height - radius; i += radius * 2 + 1 ) {
+		for( int j = radius; j < width - radius; j += radius * 2 + 1 ) {
+			if( j == radius || i == radius
+				|| j == ( width - radius - 1 ) || i == ( height - radius - 1 ) )
+			{
+				counter++;
+				continue;
+			}
+			CVector currVector = getBlockVector( blocks[counter], other.image );
+			averageLen += length( currVector );
+			vectors.push_back( currVector );
+			counter++;
+			numberOfVectors++;
+		}
+		wcout << endl;
 	}
-	double x = static_cast< double >( averageVector.x ) / static_cast< int >( blocks.size() );
-	double y = static_cast< double >( averageVector.y ) / static_cast< int >( blocks.size() );
-	// todo: нужно по полученным векторам определить глобальный вектор
-	wcout << x << " " << -y << endl;
-	return CVector( x, y );
+	averageLen /= numberOfVectors;
+	numberOfVectors = 0;
+	for( size_t i = 0; i < vectors.size(); ++i ) {
+		if( length( vectors[i] ) > averageLen ) {
+			averageVector += vectors[i];
+			numberOfVectors++;
+		}
+	}
+	return CVector( averageVector.x / numberOfVectors, averageVector.y / numberOfVectors );
 }
 
 void CImage::initializeNodesToCheck()
@@ -244,8 +281,8 @@ CVector CImage::getBlockVector( const CPoint& block, const TImage& otherImg )
 	CPoint startPoint = block;
 	currentCenter = startPoint;
 	currentSP = SP_LDSP;
-	error = INT_MAX;
-	minimumPoint = CPoint( 0, 0 );
+	minimumPoint = block;
+	error = calculateError( block, otherImg );
 	CPoint resultPoint = getFinalPoint( block, block, otherImg );
 	return resultPoint - startPoint;
 }
