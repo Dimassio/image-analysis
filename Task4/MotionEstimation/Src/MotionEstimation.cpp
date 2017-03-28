@@ -61,9 +61,9 @@ int wmain( int argc, wchar_t* argv[] )
 	GdiplusStartupInput gdiplusStartupInput;
 	ULONG_PTR gdiplusToken;
 	GdiplusStartup( &gdiplusToken, &gdiplusStartupInput, 0 );
+
 	CVector accumulatedVector( 0, 0 );
 	for( size_t i = 1; i < frames.size(); ++i ) {
-		wcout << L"Now " << frames[i - 1].c_str() << L" and " << frames[i].c_str() << endl;
 		Bitmap previousFrame( frames[i - 1].c_str() );
 		Bitmap currentFrame( frames[i].c_str() );
 
@@ -84,11 +84,14 @@ int wmain( int argc, wchar_t* argv[] )
 		CImage currImage( bmpDataCurrFrame );
 		CImage prevImage( bmpDataPrevFrame );
 		// —читаем глобальный вектор перемещени€ между предыдущим и текущим кадром
+		time_t start = clock();
 		CVector globalVector = currImage.EstimateMotionVectorFrom( prevImage );
+		time_t finish = clock();
+		// wcout << ( double ) ( finish - start ) / CLOCKS_PER_SEC << endl;
 		// ¬ектор смещени€ относительно самого первого кадра получаетс€ сложением 
 		// смещений предыдущих кадров
 		accumulatedVector += globalVector;
-		wcout << accumulatedVector.x << L" " << accumulatedVector.y << endl;
+		wcout << accumulatedVector.X << L" " << accumulatedVector.Y << endl;
 
 		currentFrame.UnlockBits( &bmpDataCurrFrame );
 		previousFrame.UnlockBits( &bmpDataPrevFrame );

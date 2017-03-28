@@ -1,17 +1,16 @@
 ﻿#pragma once
 
 #include <vector>
-#include <deque>
 #include <map>
 
 typedef std::vector< std::vector< BYTE > > TImage;
 
 struct CPoint {
-	int x;
-	int y;
+	int X;
+	int Y;
 
-	CPoint( int _x = 0, int _y = 0 )
-		: x( _x ), y( _y )
+	CPoint( int x = 0, int y = 0 ) :
+		X( x ), Y( y )
 	{
 	}
 
@@ -20,39 +19,39 @@ struct CPoint {
 		if( &a == this ) {
 			return *this;
 		}
-		x = a.x;
-		y = a.y;
+		X = a.X;
+		Y = a.Y;
 		return *this;
 	}
 
 	CPoint operator+( const CPoint& a ) const
 	{
-		return CPoint( a.x + x, a.y + y );
+		return CPoint( a.X + X, a.Y + Y );
 	}
 
 	CPoint operator-( const CPoint& a ) const
 	{
-		return CPoint( x - a.x, y - a.y );
+		return CPoint( X - a.X, Y - a.Y );
 	}
 
 	CPoint operator+=( const CPoint& a )
 	{
-		x += a.x;
-		y += a.y;
+		X += a.X;
+		Y += a.Y;
 		return *this;
 	}
 
 	bool operator==( const CPoint& a ) const
 	{
-		return ( x == a.x && y == a.y );
+		return ( X == a.X && Y == a.Y );
 	}
 
 	bool operator<( const CPoint& a ) const
 	{
-		if( x < a.x ) {
+		if( X < a.X ) {
 			return true;
-		} else if( x == a.x ) {
-			return y < a.y;
+		} else if( X == a.X ) {
+			return Y < a.Y;
 		} else {
 			return false;
 		}
@@ -62,15 +61,15 @@ struct CPoint {
 typedef CPoint CVector;
 
 struct CBlock {
-	CVector motionVector;
-	CPoint center;
-	CPoint dest;
-	double error;
-	double disp;
-	double dev;
-	double belief;
+	CVector MotionVector;
+	CPoint Center;
+	CPoint Dest;
+	double Error;
+	double Disp;
+	double Dev;
+	double Belief;
 	// Используется при доп фильтрации + расчитывании зума
-	double z;
+	double Z;
 };
 
 class CImage {
@@ -109,8 +108,7 @@ private:
 	CPoint minimumPoint;
 	int height;
 	int width;
-	// Окна 15 на 15
-	const int radius = 7;
+	const int radius = 9;
 	// Список вершин, в которые возможно переходы из i центра
 	std::vector< std::vector<int> > nodesToCheck;
 

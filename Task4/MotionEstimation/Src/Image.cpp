@@ -5,6 +5,8 @@
 #include <Algorithm>
 #include <cmath>
 
+const double Epsilon = 0.000001;
+
 // Строим гистограмму по заданному набору значений и возвращаем
 // максимальное значение
 template<typename T>
@@ -17,7 +19,7 @@ T getHistogramMaximum( const std::vector<T>& values )
 	int count = 1;
 	T currValue = hist[0];
 	for( size_t i = 1; i < hist.size(); ++i ) {
-		if( abs( currValue - hist[i] ) < 0.000001 ) {
+		if( abs( currValue - hist[i] ) < Epsilon ) {
 			count++;
 		} else {
 			if( count > maxCounter ) {
@@ -60,9 +62,8 @@ CImage::CImage( const BitmapData& bmpData )
 	int counter = 0;
 	for( int i = radius; i < height - radius; i += radius * 2 + 1 ) {
 		for( int j = radius; j < width - radius; j += radius * 2 + 1 ) {
-			// todo: make good
 			CBlock newBlock;
-			newBlock.center = CPoint( j, i );
+			newBlock.Center = CPoint( j, i );
 			blocks.push_back( newBlock );
 			pointToBlockNumber.insert( std::make_pair( CPoint( j, i ), counter ) );
 			counter++;
@@ -93,13 +94,12 @@ void CImage::GetData( BitmapData& bmpData ) const
 CVector CImage::EstimateMotionVectorFrom( const CImage& other )
 {
 	for( size_t i = 0; i < blocks.size(); ++i ) {
-		CPoint resultPoint = getBlockVector( blocks[i].center, other.image );
+		CPoint resultPoint = getBlockVector( blocks[i].Center, other.image );
 		// Меньшая ошибка - ошибка данного блока
-		blocks[i].error = error;
-		blocks[i].dest = resultPoint;
-		CVector movement = resultPoint - blocks[i].center;
-		// NOTE:  Т.к. ось У перевернута
-		blocks[i].motionVector = CVector( movement.x, movement.y );
+		blocks[i].Error = error;
+		blocks[i].Dest = resultPoint;
+		CVector movement = resultPoint - blocks[i].Center;
+		blocks[i].MotionVector = CVector( movement.X, movement.Y );
 	}
 
 	calculateVectorDev();
@@ -327,10 +327,10 @@ double CImage::calculateError( const CPoint& coords, const TImage& otherImg ) co
 	double sum = 0.0;
 	for( int i = -radius; i < radius + 1; ++i ) {
 		for( int j = -radius; j < radius + 1; ++j ) {
-			int thisImgX = currentCenter.x + j;
-			int thisImgY = currentCenter.y + i;
-			int otherImgX = coords.x + j;
-			int otherImgY = coords.y + i;
+			int thisImgX = currentCenter.X + j;
+			int thisImgY = currentCenter.Y + i;
+			int otherImgX = coords.X + j;
+			int otherImgY = coords.Y + i;
 			sum += abs( image[thisImgY][thisImgX] - otherImg[otherImgY][otherImgX] );
 		}
 	}
@@ -341,8 +341,8 @@ double CImage::calculateError( const CPoint& coords, const TImage& otherImg ) co
 // Точки за рамкой (см конструктор) не берем
 bool CImage::inTheBox( const CPoint& point ) const
 {
-	bool isInside = ( point.x < width - radius && point.x >= radius );
-	isInside = isInside && ( point.y < height - radius && point.y >= radius );
+	bool isInside = ( point.X < width - radius && point.X >= radius );
+	isInside = isInside && ( point.Y < height - radius && point.Y >= radius );
 	return isInside;
 }
 
@@ -377,12 +377,12 @@ void CImage::calculateVectorDev()
 						continue;
 					}
 					int neighbour = pointToBlockNumber[CPoint( j + deltaX * ( 2 * radius + 1 ), i + deltaY * ( 2 * radius + 1 ) )];
-					sum += std::pow( blocks[current].motionVector.x - blocks[neighbour].motionVector.x, 2 )
-						+ std::pow( blocks[current].motionVector.y - blocks[neighbour].motionVector.y, 2 );
+					sum += std::pow( blocks[current].MotionVector.X - blocks[neighbour].MotionVector.X, 2 )
+						+ std::pow( blocks[current].MotionVector.Y - blocks[neighbour].MotionVector.Y, 2 );
 				}
 			}
 			sum /= 4.0;
-			blocks[current].dev = sum;
+			blocks[current].Dev = sum;
 		}
 	}
 }
@@ -395,15 +395,15 @@ void CImage::calculateVariance()
 		int sumSqr = 0;
 		for( int deltaY = -radius; deltaY < radius + 1; ++deltaY ) {
 			for( int deltaX = -radius; deltaX < radius + 1; ++deltaX ) {
-				int thisImgX = blocks[iter].center.x + deltaX;
-				int thisImgY = blocks[iter].center.y + deltaY;
+				int thisImgX = blocks[iter].Center.X + deltaX;
+				int thisImgY = blocks[iter].Center.Y + deltaY;
 				sum += image[thisImgY][thisImgX];
 				sumSqr += image[thisImgY][thisImgX] * image[thisImgY][thisImgX];
 			}
 		}
 		double mean = sum / ( ( 2 * radius + 1 ) * ( 2 * radius + 1 ) );
 		disp = sumSqr / ( ( 2 * radius + 1 ) * ( 2 * radius + 1 ) ) - mean * mean;
-		blocks[iter].disp = disp;
+		blocks[iter].Disp = disp;
 	}
 }
 
@@ -414,14 +414,14 @@ double CImage::calculateBeliefs()
 	double c = 1.0;
 	double maxBelief = -INT_MAX;
 	for( size_t i = 0; i < blocks.size(); ++i ) {
-		if( abs( blocks[i].disp ) <= 0.000001 ) {
-			blocks[i].belief = 0.0;
+		if( abs( blocks[i].Disp ) <= 0.000001 ) {
+			blocks[i].Belief = 0.0;
 			continue;
 		}
-		double expr = a * blocks[i].error + b / blocks[i].disp + c * blocks[i].dev;
-		blocks[i].belief = std::pow( expr, -1 );
-		if( blocks[i].belief > maxBelief ) {
-			maxBelief = blocks[i].belief;
+		double expr = a * blocks[i].Error + b / blocks[i].Disp + c * blocks[i].Dev;
+		blocks[i].Belief = std::pow( expr, -1 );
+		if( blocks[i].Belief > maxBelief ) {
+			maxBelief = blocks[i].Belief;
 		}
 	}
 	return maxBelief;
@@ -454,7 +454,7 @@ void CImage::filterBlocks( double maxBelief )
 				}
 				++numberOfBlocks;
 				int current = pointToBlockNumber[CPoint( j, i )];
-				if( blocks[current].belief >= threshold ) {
+				if( blocks[current].Belief >= threshold ) {
 					counter++;
 				}
 			}
@@ -482,7 +482,7 @@ void CImage::refreshBlocks( double threshold )
 				continue;
 			}
 			int current = pointToBlockNumber[CPoint( j, i )];
-			if( blocks[current].belief >= threshold ) {
+			if( blocks[current].Belief >= threshold ) {
 				newBlocks.push_back( blocks[current] );
 			}
 		}
@@ -501,13 +501,13 @@ void CImage::filterZ( double s )
 		// По сотой от S изменяем
 		t += 0.01 * s;
 		for( size_t i = 0; i < blocks.size(); ++i ) {
-			if( s - t <= blocks[i].z && blocks[i].z <= s + t ) {
+			if( s - t <= blocks[i].Z && blocks[i].Z <= s + t ) {
 				++currNumberOfBlocks;
 			}
 		}
 	}
 	for( size_t i = 0; i < blocks.size(); ++i ) {
-		if( s - t <= blocks[i].z && blocks[i].z <= s + t ) {
+		if( s - t <= blocks[i].Z && blocks[i].Z <= s + t ) {
 			newBlocks.push_back( blocks[i] );
 		}
 	}
@@ -523,7 +523,6 @@ void CImage::filterZ( double s )
 void CImage::parametersEstimation( int& a, int& b, double& s, double& phi )
 {
 	int N = ( int ) blocks.size();
-	// TODO: поиграй с ним
 	int M = N / 2;
 	// По этому набору будем смотрить гистограмму и находить S
 	std::vector<double> z;
@@ -538,12 +537,12 @@ void CImage::parametersEstimation( int& a, int& b, double& s, double& phi )
 				vecNum = rand() % N;
 			}
 			CBlock v2 = blocks[vecNum];
-			sValues.push_back( std::sqrt( ( double ) ( ( v2.dest.x - v1.dest.x ) * ( v2.dest.x - v1.dest.x ) + ( v2.dest.y - v1.dest.y ) * ( v2.dest.y - v1.dest.y ) )
-				/ ( double ) ( ( v2.center.x - v1.center.x ) * ( v2.center.x - v1.center.x ) + ( v2.center.y - v1.center.y ) * ( v2.center.y - v1.center.y ) ) ) );
+			sValues.push_back( std::sqrt( ( double ) ( ( v2.Dest.X - v1.Dest.X ) * ( v2.Dest.X - v1.Dest.X ) + ( v2.Dest.Y - v1.Dest.Y ) * ( v2.Dest.Y - v1.Dest.Y ) )
+				/ ( double ) ( ( v2.Center.X - v1.Center.X ) * ( v2.Center.X - v1.Center.X ) + ( v2.Center.Y - v1.Center.Y ) * ( v2.Center.Y - v1.Center.Y ) ) ) );
 		}
 		// Считаем максимум по одномерной гистограмме
 		double zN = getHistogramMaximum( sValues );
-		blocks[i].z = zN;
+		blocks[i].Z = zN;
 		z.push_back( zN );
 	}
 	// Зная все Z_n посчитаем параметр S
@@ -563,16 +562,16 @@ void CImage::parametersEstimation( int& a, int& b, double& s, double& phi )
 	int mixedProdSumYX12 = 0;
 	int mixedProdSumYY12 = 0;
 	for( size_t i = 0; i < blocks.size(); ++i ) {
-		sumOfX1 += blocks[i].center.x;
-		sumOfY1 += blocks[i].center.y;
-		sumOfX2 += blocks[i].dest.x;
-		sumOfY2 += blocks[i].dest.y;
-		sumOfSqrX2 += blocks[i].dest.x * blocks[i].dest.x;
-		sumOfSqrY2 += blocks[i].dest.y * blocks[i].dest.y;
-		mixedProdSumXX12 += blocks[i].center.x * blocks[i].dest.x;
-		mixedProdSumYY12 += blocks[i].center.y * blocks[i].dest.y;
-		mixedProdSumXY12 += blocks[i].center.x * blocks[i].dest.y;
-		mixedProdSumYX12 += blocks[i].center.y * blocks[i].dest.x;
+		sumOfX1 += blocks[i].Center.X;
+		sumOfY1 += blocks[i].Center.Y;
+		sumOfX2 += blocks[i].Dest.X;
+		sumOfY2 += blocks[i].Dest.Y;
+		sumOfSqrX2 += blocks[i].Dest.X * blocks[i].Dest.X;
+		sumOfSqrY2 += blocks[i].Dest.Y * blocks[i].Dest.Y;
+		mixedProdSumXX12 += blocks[i].Center.X * blocks[i].Dest.X;
+		mixedProdSumYY12 += blocks[i].Center.Y * blocks[i].Dest.Y;
+		mixedProdSumXY12 += blocks[i].Center.X * blocks[i].Dest.Y;
+		mixedProdSumYX12 += blocks[i].Center.Y * blocks[i].Dest.X;
 	}
 	// Количество блоков, после Z фильтрации
 	int k = ( int ) blocks.size();
@@ -582,6 +581,6 @@ void CImage::parametersEstimation( int& a, int& b, double& s, double& phi )
 	// double _y = sumOfX1 * sumOfX2 + sumOfX1 * sumOfY2 - sumOfY1 * sumOfX2 + sumOfY1 * sumOfY2
 	// - k * mixedProdSumXX12 - k * mixedProdSumXY12 + k * mixedProdSumYX12 - k * mixedProdSumYY12;
 	phi = 0.0;// std::acos( _x ) + std::acos( _s * _y );
-	a = ( sumOfX2 - s * std::cos( phi ) * sumOfX1 + s * std::sin( phi ) * sumOfY1 ) / k;
-	b = ( sumOfY2 - s * std::sin( phi ) * sumOfX1 - s * std::cos( phi ) * sumOfY1 ) / k;
+	a = ceil( ( sumOfX2 - s * std::cos( phi ) * sumOfX1 + s * std::sin( phi ) * sumOfY1 ) / k );
+	b = ceil( ( sumOfY2 - s * std::sin( phi ) * sumOfX1 - s * std::cos( phi ) * sumOfY1 ) / k );
 }
